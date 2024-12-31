@@ -1,3 +1,5 @@
+import os
+
 class ActionExecutor:
     def __init__(self):
         self.executed_actions = []
@@ -40,3 +42,19 @@ class ActionExecutor:
         for action in self.executed_actions:
             print(action)
         print("--- End of Log ---")
+    
+    def execute(self, decision):
+        if "Freeing up resources" in decision:
+            user_friendly_response = self.llm.generate_response(
+                f"Explain the following system decision to the user: {decision}"
+            )
+            print(f"Action Response: {user_friendly_response}")
+            os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
+        elif "Throttling" in decision:
+            user_friendly_response = self.llm.generate_response(
+            f"Explain the following system decision to the user: {decision}"
+            )
+            print(f"Action Response: {user_friendly_response}")
+            print(f"Executing Action: {decision}")
+        with open("actions_log.txt", "a") as log_file:
+            log_file.write(f"{decision}\n")
