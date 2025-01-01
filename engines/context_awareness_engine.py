@@ -3,7 +3,7 @@ import psutil
 import subprocess
 from datetime import datetime
 
-class ContextAwarenessEngine:
+class SystemContextAwarenessEngine:
     """
     Gathers and processes context for the Nova system.
     """
