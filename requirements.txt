@@ -1,3 +1,6 @@
 psutil
 asyncio
 immutables
+numpy
+requests
+pytz
