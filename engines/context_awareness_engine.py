@@ -18,8 +18,8 @@ class ContextAwarenessEngine:
             "memory_usage": psutil.virtual_memory().percent,
             "disk_usage": psutil.disk_usage('/').percent,
             "gpu_usage": self.gpu_stats(),
-            "nova_cpu_usage": process.cpu_percent(interval=1),
-            "nova_memory_usage": process.memory_percent(),
+            "my_cpu_usage": process.cpu_percent(interval=1),
+            "my_memory_usage": process.memory_percent(),
         }
         return context
 
