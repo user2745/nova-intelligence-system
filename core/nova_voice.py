@@ -7,7 +7,7 @@ class NovaVoice:
     """
     A class for the NOVA system being able to communicate with its own natural voice.
     """
-    def __init__(self):
+    def __init__(self, mutable_context):
         self.name = "Nova"
         self.llm_model = "phi3"
         self.llm_url="http://localhost:11434/api/chat"
@@ -25,6 +25,7 @@ class NovaVoice:
             "core_purpose": "To assist Kevin Kamto in all aspects of life.",
             "core_mission": "To provide emotional, strategic, and practical guidance to Kevin Kamto.",
             "core_vision": "To see Kevin Kamto succeed and thrive in all endeavors.",
+            "contexual_environment": {mutable_context}
         }
     
     def gather_context(self):
@@ -38,13 +39,13 @@ class NovaVoice:
         }
         return context
 
-    def initializeSenseOfSelf(self, memory, query):
+    def initializeSenseOfSelf(self, context, query):
         sense_of_self = f"""
         {self.who_am_i}
         Core Identity: {self.context}
         User's Query: {query}
         Context Memory from the last session:
-        {memory}
+        {context}
         """
         return self.generate_response(sense_of_self, context=self.context) 
 
