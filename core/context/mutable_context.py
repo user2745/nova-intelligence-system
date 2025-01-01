@@ -1,0 +1,45 @@
+from threading import Lock
+
+class MutableContext:
+    def __init__(self, immutable_context):
+        self._context = {}
+        self.lock = Lock()
+        self.immutable_context = immutable_context
+        self.subscribers = []
+
+    def get_context(self, key):
+        with self.lock:
+            return self._context.get(key)
+
+    def update_context(self, key, value):
+        """
+        Update the mutable context and notify subscribers.
+        """
+        with self.lock:
+            self._context[key] = value
+        print(f"Mutable context updated: {key} -> {value}")
+        self.notify_subscribers(key, value)
+
+    def subscribe(self, callback):
+        """
+        Subscribe a component to context updates.
+        """
+        self.subscribers.append(callback)
+
+    def notify_subscribers(self, key, value):
+        """
+        Notify all subscribers of a context update.
+        """
+        for subscriber in self.subscribers:
+            try:
+                subscriber(key, value)
+            except Exception as e:
+                print(f"Error notifying subscriber: {e}")
+
+    def freeze(self):
+        """
+        Propagate the current mutable context to the immutable pool.
+        """
+        with self.lock:
+            self.immutable_context.snapshot(self._context)
+        print("Mutable context frozen.")
