@@ -17,6 +17,3 @@ class ContextEngineManager:
     def notify_subscribers(self, key, value):
         # Notify subscribed engines about context updates
         print(f"Context updated: {key} -> {value}")
-
-# Usage Example
-
