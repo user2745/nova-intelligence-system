@@ -1,8 +1,10 @@
 import asyncio
+from core.context.immutable_context import ImmutableContext
 from core.nova_core import NovaCore
 
 async def main():
-    core = NovaCore()
+    context = ImmutableContext()
+    core = NovaCore(context)
     core.initialize()
 
     try:
