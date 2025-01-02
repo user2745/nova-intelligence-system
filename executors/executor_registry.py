@@ -7,7 +7,7 @@ class ExecutorRegistry:
 
     def __init__(self): 
         # Using a dictionary for action executors to allow dynamic addition/removal by name
-        self.action_executors = {"ActionExecutor": ActionExecutor()}
+        self.executors = {}
 
     def get_action_executor(self, name):
         """
