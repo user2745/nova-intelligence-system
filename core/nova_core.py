@@ -5,6 +5,7 @@ import signal
 import importlib
 import asyncio
 import sys
+from utils.questdb import QuestDBConnector
 from core.context.mutable_context import MutableContext
 from core.nova_registry import NovaRegistry
 from core.nova_manager import NovaManager
@@ -38,7 +39,9 @@ class NovaCore:
 
         # Loading the initial context
         print("[Core] Loading initial context...")
-        self.mutable_context = MutableContext(self.immutable_context)
+        questdb_connector = QuestDBConnector()
+        self.mutable_context = MutableContext(self.immutable_context, questdb_connector)
+
 
         # Record startup event in context
         startup_entry = {

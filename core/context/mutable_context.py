@@ -1,10 +1,11 @@
 from threading import Lock
 
 class MutableContext:
-    def __init__(self, immutable_context):
+    def __init__(self, immutable_context, questdb_connector):
         self._context = {}
         self.lock = Lock()
         self.immutable_context = immutable_context
+        self.questdb_connector = questdb_connector
         self.subscribers = []
 
     def get_current_context(self):
@@ -24,8 +25,20 @@ class MutableContext:
         """
         with self.lock:
             self._context[key] = value
+            self.questdb_connector.save_context_snapshot(key, value)
         print(f"Mutable context updated: {key} -> {value}")
         self.notify_subscribers(key, value)
+
+    def restore_context(self, key):
+        """
+        Restore a context value from QuestDB.
+        """
+        with self.lock:
+            value = self.questdb_connector.load_context_snapshot(key)
+            if value:
+                self._context[key] = value
+                print(f"Context restored from QuestDB: {key} -> {value}")
+            return value
 
     def subscribe(self, callback=None):
         """
