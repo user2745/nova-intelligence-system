@@ -18,7 +18,6 @@ class NovaManager:
         self.engines = {"SystemContextAwarenessEngine": SystemContextAwarenessEngine(), "TimeContextAwarenessEngine": TimeContextAwarenessEngine()} 
         self.context = mutable_context
         self.registry = nova_registry
-        self.dmus = []
         self.executors = []
         self.active_tasks = set()
 
@@ -27,14 +26,23 @@ class NovaManager:
 
     def load_state(self):
         pass
-
+   
+    async def add_task(self, coro, name):
+            task = asyncio.create_task(coro, name=name)
+            self.active_tasks.add(task)
+            task.add_done_callback(self.active_tasks.discard)
+            print(f"Task {name} added.")
+            return task
 
     async def monitor_system_stats(self):
         print("Monitoring system stats...")
         try:
             while True:  # Simulating continuous monitoring
                 stats = self.engines["SystemContextAwarenessEngine"].gather_context()
-                print(stats)
+                self.context.update_context("CPU_usage", stats["cpu_usage"])
+                self.context.update_context("GPU_usage", stats["gpu_usage"])
+                self.context.update_context("memory_usage", stats["memory_usage"])
+                self.context.update_context("disk_usage", stats["disk_usage"])
                 await asyncio.sleep(1)
         except asyncio.CancelledError:
             print("System stats monitoring task was cancelled.")
@@ -47,24 +55,14 @@ class NovaManager:
         try:
             while True:  # Simulating continuous monitoring
                 current_time = self.engines["TimeContextAwarenessEngine"].gather_context()
-                print(f"Current time: {current_time}")
+                self.context.update_context("time_of_day", current_time)
                 await asyncio.sleep(1)
         except asyncio.CancelledError:
             print("Time status monitoring task was cancelled.")
             raise
         finally:
             print("Time status monitoring task completed.")
-   
-    async def add_task(self, coro, name):
-            task = asyncio.create_task(coro, name=name)
-            self.active_tasks.add(task)
-            task.add_done_callback(self.active_tasks.discard)
-            print(f"Task {name} added.")
-            return task
 
-    def print_context(self, key, value):
-        print(f"Context updated: {key} -> {value}")
-    
 
     def get_tasks(self):
         return list(self.active_tasks)

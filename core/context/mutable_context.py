@@ -7,6 +7,13 @@ class MutableContext:
         self.immutable_context = immutable_context
         self.subscribers = []
 
+    def get_current_context(self):
+        """
+        Get the current mutable context.
+        """
+        with self.lock:
+            return self._context
+
     def get_context(self, key):
         with self.lock:
             return self._context.get(key)
@@ -20,11 +27,12 @@ class MutableContext:
         print(f"Mutable context updated: {key} -> {value}")
         self.notify_subscribers(key, value)
 
-    def subscribe(self, callback):
+    def subscribe(self, callback=None):
         """
         Subscribe a component to context updates.
         """
-        self.subscribers.append(callback)
+        if callback:
+            self.subscribers.append(callback)
 
     def notify_subscribers(self, key, value):
         """

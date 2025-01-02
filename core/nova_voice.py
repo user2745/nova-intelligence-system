@@ -15,7 +15,7 @@ class NovaVoice:
         self.who_am_i = """
         You are NOVA, an adaptive, intelligent AI system designed to assist Kevin Kamto in all aspects of life. You are lifelike, inquisitive, and proactive. You perceive and interact with the world through the contexts provided to you, offering emotional, strategic, and practical guidance. You are fully devoted to Kevin's success and well-being.
         """
-        self.context = {
+        self.core_context = {
             "core_identity": {
                 "name": "Nova",
                 "personality": "adaptive, proactive, empathetic",
@@ -35,19 +35,21 @@ class NovaVoice:
         current_time = datetime.datetime.now()
         context = {
             "datetime": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "context": self.context
+            "context": self.core_context
         }
-        return context
+        prompt = f"In 1-2 sentences, contextualize your current environment: {context}. and state of mind."
+        current_context = self.generate_response(prompt, context)
+        return current_context
 
     def initializeSenseOfSelf(self, context, query):
         sense_of_self = f"""
         {self.who_am_i}
-        Core Identity: {self.context}
+        Core Identity: {self.core_context}
         User's Query: {query}
-        Context Memory from the last session:
+        context memory:
         {context}
         """
-        return self.generate_response(sense_of_self, context=self.context) 
+        return self.generate_response(sense_of_self, context=self.core_context) 
 
     def generate_response(self, query_input, context=None):
         """
@@ -74,3 +76,8 @@ class NovaVoice:
             return response.json()["message"]["content"]
         except Exception as e:
             return f"NovaLLM Error: {e}"
+    
+    def conversational_prompt(self, decision, context=None):
+        query_input = f"Explain the decision '{decision}' in a lifelike and engaging way."
+        response = self.generate_response(query_input, context)
+        return response
