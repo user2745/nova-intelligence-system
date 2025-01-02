@@ -1,60 +1,38 @@
-import os
-
 class ExecutorManager:
-    def __init__(self):
+    def __init__(self, voice_module):
         self.executed_actions = []
+        self.voice = voice_module
 
-    def run(self, decisions):
-        for decision in decisions:
-            if decision:
-                print(f"Executing: {decision}")
-                user_response = self.proactive_message(decision)
-                if user_response:
-                    self.handle_user_response(user_response, decision)
-        print("Actions completed.")
-        self.log_executed_actions()
-
-    def proactive_message(self, decision):
-        # Debug log to check decision contents
-        print(f"[DEBUG] Decision passed to proactive_message: {decision}")
-
-        # Trigger proactive prompts based on decision keywords
-        if "umbrella" in decision.lower():
-            return input("Proactive Alert: Looks like rain tomorrow. Set a reminder? (yes/no): ")
-        elif "energy" in decision.lower():
-            return input("Proactive Alert: Energy usage is high. Dim the lights? (yes/no): ")
-        elif "stock" in decision.lower():
-            return input("Proactive Alert: Stock trend detected. Review portfolio? (yes/no): ")
-        return None
-
-    def handle_user_response(self, response, decision):
-        if response.lower() == "yes":
-            print(f"Action Confirmed: {decision}")
-            self.executed_actions.append(f"Confirmed: {decision}")
-        elif response.lower() == "no":
-            print(f"Action Skipped: {decision}")
-            self.executed_actions.append(f"Skipped: {decision}")
+    def execute(self, decision):
+        print(f"Nova: {decision}")
+        if "resource optimization" in decision:
+            user_response = input("Nova: I noticed high CPU usage. Shall I free up resources? (yes/no): ").strip().lower()
+            if user_response == "yes":
+                print("Nova: Optimizing memory...")
+                os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
+                print("Nova: Resources have been freed up.")
+                self.executed_actions.append(decision)
+            else:
+                print("Nova: Got it, no changes made.")
+        elif "pausing GPU-intensive tasks" in decision:
+            user_response = input("Nova: GPU usage is high. Would you like me to pause heavy processes? (yes/no): ").strip().lower()
+            if user_response == "yes":
+                print("Nova: Throttling GPU-intensive tasks.")
+                # Add GPU throttling logic
+                self.executed_actions.append(decision)
+        elif "lunchtime" in decision:
+            user_response = input("Nova: It's almost noon. Would you like me to summarize your morning progress? (yes/no): ").strip().lower()
+            if user_response == "yes":
+                print("Nova: Preparing a summary of your progress...")
+                # Add progress summary logic
+                self.executed_actions.append(decision)
         else:
-            print("Invalid response. No action taken.")
+            print("Nova: No action required.")
+
+        self.log_executed_actions()
 
     def log_executed_actions(self):
         print("\n--- Executed Actions Log ---")
         for action in self.executed_actions:
             print(action)
         print("--- End of Log ---")
-    
-    def execute(self, decision):
-        if "Freeing up resources" in decision:
-            user_friendly_response = self.llm.generate_response(
-                f"Explain the following system decision to the user: {decision}"
-            )
-            print(f"Action Response: {user_friendly_response}")
-            os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
-        elif "Throttling" in decision:
-            user_friendly_response = self.llm.generate_response(
-            f"Explain the following system decision to the user: {decision}"
-            )
-            print(f"Action Response: {user_friendly_response}")
-            print(f"Executing Action: {decision}")
-        with open("actions_log.txt", "a") as log_file:
-            log_file.write(f"{decision}\n")

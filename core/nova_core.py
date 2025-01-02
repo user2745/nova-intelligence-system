@@ -8,6 +8,8 @@ import sys
 from core.context.mutable_context import MutableContext
 from core.nova_registry import NovaRegistry
 from core.nova_manager import NovaManager
+from dmus.dmu_manager import DMUManager
+from executors.executor_manager import ExecutorManager
 from core.nova_voice import NovaVoice
 
 class NovaCore:
@@ -20,6 +22,8 @@ class NovaCore:
         self.immutable_context = ImmutableContext
         self.mutable_context = None
         self.manager = None
+        self.dmu = None
+        self.executor = None
         self.running = False
 
     def initialize(self):
@@ -58,9 +62,18 @@ class NovaCore:
         print("[Core] Nova Voice initialized");
 
         print("[Core] Speaking to Nova Voice...")
-        print("[Core] Hello Nova!")
-        nova_greeting = self.voice.initializeSenseOfSelf(self.mutable_context, "Hello, Nova!")
+        prompt = "Hello Nova!  Please respond with a short sentence showing you're aware and understand the current context along with the last time you were shut down"
+        print(f"{prompt}")
+        current_context = self.voice.gather_context()
+        nova_greeting = self.voice.initializeSenseOfSelf(current_context, prompt)
         print(nova_greeting)
+
+        print("[Core] Initializing the Decision Making Unit (DMU)...")
+        self.dmu = DMUManager(self.mutable_context)
+
+        print("[Core] Initializing the Activities Executor...")
+        self.executor = ExecutorManager(self.voice)
+
 
         print("[Core] Nova is ready for operation.")
         self.mutable_context.freeze()
@@ -95,6 +108,7 @@ class NovaCore:
         print("All tasks cancelled. Saving memory state.")
         try:
             self.manager.save_state()
+            self.mutable_context.update_context("last_shutdown", datetime.datetime.now().isoformat())   
             self.mutable_context.freeze()
         except Exception as e:
             print(f"Error saving memory state: {e}")
@@ -102,12 +116,36 @@ class NovaCore:
         print("[Core] Nova has been shut down successfully. Goodbye!")
         sys.exit(0)
 
+    async def monitor(self):
+        """
+        Monitor the system and make stream of consciousness logs based on the context.
+        """
+        print("[Core] Starting monitor loop...")
+        try:
+            while self.running:
+                thought = self.voice.generate_response("Generate a stream-of-consciousness observation of your current context.  keep it to one or two sentences tops", self.mutable_context.get_current_context())
+                print(f"[Nova] {thought}")
+                self.mutable_context.update_context("last_stream_of_consciousness_thought", thought)
+                await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            print("[Core] Monitor loop cancelled.")
+        except Exception as e:
+            print(f"[Core] Monitor loop error: {e}")
+        
+
     async def run(self):
         try:
             print(f"Core: [{datetime.datetime.now()}] Nova is now running... [{self.running}]")
             tasks = self.manager.run_tasks()
             print(f"Running tasks: {tasks}")
+            print("Nova: System is now live and monitoring in real-time.")
+            decisions = await self.dmu.make_decisions()
+            print(f"Decisions: {decisions}")
+            print("Nova: Executing decisions...")
+            monitor_context = asyncio.create_task(self.monitor())
+            await asyncio.gather(monitor_context)
             await asyncio.gather(*tasks)
+            await asyncio.gather(*decisions)
         except asyncio.CancelledError:
             print("[Core] Run loop cancelled.")
         except Exception as e:
