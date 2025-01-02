@@ -4,3 +4,6 @@ immutables
 numpy
 requests
 pytz
+psycopg2
+SpeechRecognition
+pyttsx3
