@@ -7,11 +7,15 @@ import asyncio
 import sys
 from utils.questdb import QuestDBConnector
 from core.context.mutable_context import MutableContext
+from executors.executor_registry import ExecutorRegistry
 from core.nova_registry import NovaRegistry
 from core.nova_manager import NovaManager
 from dmus.dmu_manager import DMUManager
 from executors.executor_manager import ExecutorManager
 from core.nova_voice import NovaVoice
+
+# Testing Modules
+from executors.stress_test_executor import StressTestModule
 
 class NovaCore:
     """
@@ -75,7 +79,8 @@ class NovaCore:
         self.dmu = DMUManager(self.mutable_context)
 
         print("[Core] Initializing the Activities Executor...")
-        self.executor = ExecutorManager(self.voice)
+        executorRegistry = ExecutorRegistry()
+        self.executor = ExecutorManager(self.mutable_context, executorRegistry)
 
 
         print("[Core] Nova is ready for operation.")
@@ -128,12 +133,30 @@ class NovaCore:
             while self.running:
                 thought = self.voice.generate_response("Generate a stream-of-consciousness observation of your current context.  keep it to one or two sentences tops", self.mutable_context.get_current_context())
                 print(f"[Nova] {thought}")
-                self.mutable_context.update_context("last_stream_of_consciousness_thought", thought)
                 await asyncio.sleep(30)
         except asyncio.CancelledError:
             print("[Core] Monitor loop cancelled.")
         except Exception as e:
             print(f"[Core] Monitor loop error: {e}")
+
+    async def stress_test(self):
+        """
+        Simulate high CPU stress to test the system's decision-making capabilities.
+        """
+        print("[Core] Starting stress test...")
+        try:
+            while self.running:
+                # Simulate high CPU usage
+                print("[Nova] I am simulating high CPU usage...")
+                StressTestModule = StressTestModule()
+                self.executor.add_task("stress_executor", StressTestModule())
+                self.executor.execute_task("stress_executor")
+                print("[Nova] Stress test complete.")
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            print("[Core] Stress test cancelled.")
+        except Exception as e:
+            print(f"[Core] Stress test error: {e}")
         
 
     async def run(self):
@@ -146,9 +169,16 @@ class NovaCore:
             print(f"Decisions: {decisions}")
             print("Nova: Executing decisions...")
             monitor_context = asyncio.create_task(self.monitor())
+
+            print("Taking actions...")
+            actions = await self.stress_test()
+
+            # Continousally comment on the context
             await asyncio.gather(monitor_context)
+            # Contionually gather tasks, decisions, and take actions
             await asyncio.gather(*tasks)
             await asyncio.gather(*decisions)
+            await asyncio.gath(*actions)
         except asyncio.CancelledError:
             print("[Core] Run loop cancelled.")
         except Exception as e:
