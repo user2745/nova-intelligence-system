@@ -7,15 +7,15 @@ import importlib
 import asyncio
 import sys
 
-from engines.context_awareness_engine import SystemContextAwarenessEngine
+from engines.context_awareness_engine import SystemContextEngine
 from engines.time_context_engine import TimeContextAwarenessEngine
 
 class NovaManager:
     """
-    Manager class for the Nova system, responsible for managing context, insights, and events. 
+    Manager class for the Nova system, responsible for managing context, decisions, and actions. 
     """
     def __init__(self, mutable_context, nova_registry):
-        self.engines = {"SystemContextAwarenessEngine": SystemContextAwarenessEngine(), "TimeContextAwarenessEngine": TimeContextAwarenessEngine()} 
+        self.engines = {"SystemContextEngine": SystemContextEngine(), "TimeContextAwarenessEngine": TimeContextAwarenessEngine()} 
         self.context = mutable_context
         self.registry = nova_registry
         self.executors = []
@@ -35,10 +35,9 @@ class NovaManager:
             return task
 
     async def monitor_system_stats(self):
-        print("Monitoring system stats...")
         try:
             while True:  # Simulating continuous monitoring
-                stats = self.engines["SystemContextAwarenessEngine"].gather_context()
+                stats = self.engines["SystemContextEngine"].gather_context()
                 self.context.update_context("CPU_usage", stats["cpu_usage"])
                 self.context.update_context("GPU_usage", stats["gpu_usage"])
                 self.context.update_context("memory_usage", stats["memory_usage"])
@@ -51,7 +50,6 @@ class NovaManager:
             print("System stats monitoring task completed.")
 
     async def monitor_time_status(self):
-        print("Monitoring time status...")
         try:
             while True:  # Simulating continuous monitoring
                 current_time = self.engines["TimeContextAwarenessEngine"].gather_context()
@@ -62,6 +60,18 @@ class NovaManager:
             raise
         finally:
             print("Time status monitoring task completed.")
+
+    async def monitor_time_block_status(self):
+        try:
+            while True:
+                time_block = self.enginers["TimeAwarenessEngine"].gather_context()
+                self.context.update_context("time_block", time_block)
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            print("System time block monitoring task was cancelled")
+            raise
+        finally:
+            print("Systme time block monitoring completed")
 
 
     def get_tasks(self):
