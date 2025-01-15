@@ -5,7 +5,7 @@ import signal
 import importlib
 import asyncio
 import sys
-from utils.questdb import QuestDBConnector
+from utils.redis import RedisConnector
 from core.context.mutable_context import MutableContext
 from executors.executor_registry import ExecutorRegistry
 from core.nova_registry import NovaRegistry
@@ -13,6 +13,8 @@ from core.nova_manager import NovaManager
 from dmus.dmu_manager import DMUManager
 from executors.executor_manager import ExecutorManager
 from core.nova_voice import NovaVoice
+from ucp import UCPClient, UCPServer
+
 
 # Testing Modules
 from executors.stress_test_executor import StressTestModule
@@ -30,6 +32,8 @@ class NovaCore:
         self.dmu = None
         self.executor = None
         self.running = False
+        self.ucp_client = None
+        self.ucp_server = None
 
     def initialize(self):
         """
@@ -43,9 +47,11 @@ class NovaCore:
 
         # Loading the initial context
         print("[Core] Loading initial context...")
-        questdb_connector = QuestDBConnector()
-        self.mutable_context = MutableContext(self.immutable_context, questdb_connector)
+        redis_connector = RedisConnector()
+        self.mutable_context = MutableContext(self.immutable_context, redis_connector)
 
+        # Initialize UCP server/client
+        self._initialize_ucp()
 
         # Record startup event in context
         startup_entry = {
@@ -86,6 +92,47 @@ class NovaCore:
         print("[Core] Nova is ready for operation.")
         self.mutable_context.freeze()
         self.running = True
+
+    def _initialize_ucp(self):
+        """
+        Initialize UCP server or connect to an existing broker.
+        """
+        print("[Core] Setting up UCP...")
+        device_id = "NovaCore"
+        broker_address = "100.115.157.25"  # Replace with your MQTT broker address
+        self.ucp_client = UCPClient(device_id=device_id, broker_address=broker_address)
+
+        # Start client connection
+        self.ucp_client.connect()
+        self.ucp_client.subscribe(f"ucl/commands/{device_id}")
+        self.ucp_client.start_heartbeat(interval=10)
+
+        # Set up a command handler
+        self.ucp_client.set_message_handler(self._handle_ucp_command)
+
+        print(f"[Core] UCP initialized. Listening on: ucl/commands/{device_id}")
+
+    def _handle_ucp_command(self, topic, message):
+        """
+        Handle incoming UCP commands and respond directly to the originating device.
+        """
+        print(f"[Core] UCP Command received: {message}")
+        command = json.loads(message)
+
+        if command["action"] == "ping":
+            # Extract device ID from the topic
+            device_id = topic.split('/')[-1]
+            print(f"[NovaCore] Responding to ping from {device_id}...")
+
+            # Send 'pong' response back to the device
+            response_topic = f"ucl/status/{device_id}"
+            response_message = {"status": "success", "response": "pong"}
+            self.ucp_client.publish(response_topic, response_message)
+            print(f"[NovaCore] Published 'pong' to {response_topic}: {response_message}")
+        else:
+            print(f"[Core] Unrecognized action: {command['action']}")
+
+
 
     async def monitor(self):
         """

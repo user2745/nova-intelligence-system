@@ -7,7 +7,7 @@ import importlib
 import asyncio
 import sys
 
-from engines.context_awareness_engine import SystemContextEngine
+from engines.system_context_engine import SystemContextEngine
 from engines.time_context_engine import TimeContextAwarenessEngine
 
 class NovaManager:

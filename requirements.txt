@@ -4,6 +4,9 @@ immutables
 numpy
 requests
 pytz
-psycopg2
+redis
+paho-mqtt
 SpeechRecognition
 pyttsx3
+requests
+ucp-framework
