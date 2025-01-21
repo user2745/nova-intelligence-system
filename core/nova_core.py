@@ -1,3 +1,4 @@
+import json
 import re
 import datetime
 import random
@@ -86,7 +87,7 @@ class NovaCore:
 
         print("[Core] Initializing the Activities Executor...")
         executorRegistry = ExecutorRegistry()
-        self.executor = ExecutorManager(self.mutable_context, executorRegistry)
+        self.executor = ExecutorManager(self.mutable_context, executorRegistry, asyncio.get_running_loop())
 
 
         print("[Core] Nova is ready for operation.")
@@ -109,29 +110,24 @@ class NovaCore:
 
         # Set up a command handler
         self.ucp_client.set_message_handler(self._handle_ucp_command)
-
         print(f"[Core] UCP initialized. Listening on: ucl/commands/{device_id}")
 
     def _handle_ucp_command(self, topic, message):
         """
-        Handle incoming UCP commands and respond directly to the originating device.
+        Handle incoming UCP commands and forward them to the ExecutorManager.
         """
-        print(f"[Core] UCP Command received: {message}")
-        command = json.loads(message)
+        try:
+            print(f"[Core] UCP Command received: {message}")
+            command = json.loads(message)
 
-        if command["action"] == "ping":
-            # Extract device ID from the topic
-            device_id = topic.split('/')[-1]
-            print(f"[NovaCore] Responding to ping from {device_id}...")
-
-            # Send 'pong' response back to the device
-            response_topic = f"ucl/status/{device_id}"
-            response_message = {"status": "success", "response": "pong"}
-            self.ucp_client.publish(response_topic, response_message)
-            print(f"[NovaCore] Published 'pong' to {response_topic}: {response_message}")
-        else:
-            print(f"[Core] Unrecognized action: {command['action']}")
-
+            # Forward the command to ExecutorManager in the main asyncio loop
+            loop = self.executor.loop  # Pass the loop reference during ExecutorManager initialization
+            loop.call_soon_threadsafe(
+                asyncio.create_task,
+                self.executor.add_ucp_command(command, topic)
+            )
+        except Exception as e:
+            print(f"[Core] Error forwarding command to ExecutorManager: {e}")
 
 
     async def monitor(self):
@@ -224,12 +220,11 @@ class NovaCore:
             monitor_context = asyncio.create_task(self.monitor())
 
             # Continousally comment on the context
-            await asyncio.gather(monitor_context)
-
             # Contionually gather tasks, decisions, and take actions
-            await asyncio.gather(*tasks)
-            await asyncio.gather(*decisions)
-            await asyncio.gath(*actions)
+
+            await asyncio.gather( *monitor_context, *tasks, *decisions, *actions) 
+
+
 
         except asyncio.CancelledError:
             print("[Core] Run loop cancelled.")

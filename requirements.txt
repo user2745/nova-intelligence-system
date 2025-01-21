@@ -10,3 +10,4 @@ SpeechRecognition
 pyttsx3
 requests
 ucp-framework
+web3
