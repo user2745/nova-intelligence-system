@@ -9,6 +9,7 @@ class BlockchainTransactionExecutor:
 
     async def run(self, task_data):
         try:
+            logging.info(f"Starting transaction: {task_data}")
             to_address = task_data["to_address"]
             amount = task_data["amount"]
             logging.info(f"Initiating transaction: {amount} WEI to {to_address}")
