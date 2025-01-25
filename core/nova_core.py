@@ -9,6 +9,7 @@ import sys
 from utils.redis import RedisConnector
 from core.context.mutable_context import MutableContext
 from executors.executor_registry import ExecutorRegistry
+from core.memory_manager import NeuroMemoryManager
 from core.nova_registry import NovaRegistry
 from core.nova_manager import NovaManager
 from dmus.dmu_manager import DMUManager
@@ -30,6 +31,7 @@ class NovaCore:
         self.immutable_context = ImmutableContext
         self.mutable_context = None
         self.manager = None
+        self.memory = None
         self.dmu = None
         self.executor = None
         self.running = False
@@ -82,13 +84,17 @@ class NovaCore:
         nova_greeting = self.voice.initializeSenseOfSelf(current_context, prompt)
         print(nova_greeting)
 
+        print("[Core] Initializing the Memory Manager...")
+        self.memory = NeuroMemoryManager(self.mutable_context)
+
         print("[Core] Initializing the Decision Making Unit (DMU)...")
-        self.dmu = DMUManager(self.mutable_context)
+        self.dmu = DMUManager(self.mutable_context, self.memory)
+        self.dmu.executor = self.executor
 
         print("[Core] Initializing the Activities Executor...")
         executorRegistry = ExecutorRegistry()
         self.executor = ExecutorManager(self.mutable_context, executorRegistry, asyncio.get_running_loop())
-
+        self.executor.dmu = self.dmu
 
         print("[Core] Nova is ready for operation.")
         self.mutable_context.freeze()
@@ -205,7 +211,11 @@ class NovaCore:
 
     async def run(self):
         try:
-            print(f"Core: [{datetime.datetime.now()}] Nova is now running... [{self.running}]")
+            
+            print(f"[Core] Running Nova Core...")
+            print(f"[Core] Loading memory...")
+            await self.memory.initialize(self)
+
             tasks = self.manager.run_tasks()
             print(f"Running tasks: {tasks}")
 
