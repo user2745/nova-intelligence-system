@@ -11,3 +11,5 @@ pyttsx3
 requests
 ucp-framework
 web3
+aiohttp
+psycopg2
