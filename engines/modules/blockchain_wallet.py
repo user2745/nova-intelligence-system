@@ -9,6 +9,7 @@ class BlockchainWallet:
     def __init__(self, rpc_url, private_key):
         self.web3 = Web3(Web3.HTTPProvider(rpc_url))
         self.account = self.web3.eth.account.from_key(private_key)
+        self.nonce = self.web3.eth.get_transaction_count(self.account.address)
 
     def get_balance(self):
         """Fetch wallet balance."""
@@ -69,6 +70,7 @@ class BlockchainWallet:
         # Sign and send the transaction
         signed_tx = self.account.sign_transaction(transaction)
         tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)  # Correct case
+        self.nonce += 1
         logging.info(f"Transaction sent. Hash: {self.web3.to_hex(tx_hash)}")
         return self.web3.to_hex(tx_hash)
 
