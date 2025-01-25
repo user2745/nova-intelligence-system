@@ -1,89 +1,57 @@
+# dmu_manager.py
 import asyncio
-import datetime
+from core.memory_manager import AIDMUWithMemory  # Added import
+
 class DMUManager:
-    def __init__(self, mutable_context):
+    def __init__(self, mutable_context, memory_manager):
         self.context = mutable_context
-        self.baseline = {
-            "cpu_threshold": 50,  # Adjust as needed
-            "gpu_threshold": 10,  # Adjust as needed
-        }
-        self.active_decisions = set()
+        self.llm = AIDMUWithMemory(memory_manager=memory_manager, llm_url="http://localhost:11434/api/chat", model_name="deepthink-r1")
+        self.executor = None  # Will be injected from NovaCore
 
     async def make_decisions(self):
-        """
-        Continuously evaluate system stats, make decisions, and execute them.
-        """
-        print("Nova: Starting decision-making loop...")
+        """Main decision loop using deepthink-r1"""
         try:
-
-
-            # Observation -> Evaluation -> Execution Pipeline
-            observation_task = asyncio.create_task(self.make_observations())
-            evaluations = asyncio.create_task(self.evaluate_observations(await observation_task))
-            decisions = asyncio.create_task(self.execute_decisions(await evaluations))
-
-            self.active_decisions.add(observation_task)
-            self.active_decisions.add(evaluations)
-            self.active_decisions.add(decisions)
-            return list(self.active_decisions)
+            while True:
+                context = self._format_context()
+                decision = await self.llm.run(context)
+                await self._execute_llm_decision(decision)
+                await asyncio.sleep(5)  # Throttle decisions
         except asyncio.CancelledError:
-            print("Nova: Decision-making loop has been cancelled.")
-            raise
-        except Exception as e:
-            print(f"Nova: Error in decision-making loop: {e}")
-        finally:
-            print("Nova: Decision-making loop ended.")
+            print("Decision loop cancelled")
 
-    async def make_observations(self):
-        """
-        Continuously monitor system stats and make observations.
-        """
-        context = self.context.get_current_context()
-        time_of_day = context.get("time_of_day", {}).get("time", "")
-        print("Nova: Making observations...")
-        print(f"Nova: Current context: {context}")
-        observations = []
-        if context["CPU_usage"] > self.baseline["cpu_threshold"]:
-            observations.append("High CPU usage detected.")
-            print("Nova: High CPU usage detected.")
-        if context["GPU_usage"] > self.baseline["gpu_threshold"]:
-            observations.append("GPU usage is elevated.")
-        if "12:00" <= time_of_day < "13:00":
-            observations.append("It's lunchtime.")
-        if "16:00" <= time_of_day < "17:00":
-            observations.append("Afternoon slump detected.")
+    def _format_context(self):
+        """Unified context formatting for LLM"""
+        raw_ctx = self.context.get_current_context()
+        return (
+            f"System Status: CPU {raw_ctx.get('CPU_usage', '?')}%, "
+            f"Memory {raw_ctx.get('memory_usage', '?')}%. "
+            f"Time: {raw_ctx.get('time_of_day', {}).get('time', '?')}. "
+            f"Wallet: {raw_ctx.get('wallet_status', {}).get('balance', '?')} ETH"
+        )
 
-        return observations
+    async def _execute_llm_decision(self, decision):
+        """Parse and validate LLM output"""
+        if "ACTION:" in decision:
+            action = self._parse_action(decision)
+            if action and self._validate_action(action):
+                print(f"Executing: {action['command']}")
+                await self.executor.add_task(1, action["module"], action["params"])
 
-    async def evaluate_observations(self, observations):
-        """
-        Evaluate the observations made and generate a list of evaluations.
-        """
-        evaluation_map = {
-            "High CPU usage detected.": "Propose resource optimization: Freeing up memory.",
-            "GPU usage is elevated.": "Recommend pausing GPU-intensive tasks.",
-            "It's lunchtime.": "Suggest taking a break and summarizing morning progress.",
-            "Afternoon slump detected.": "Encourage a quick stretch or refreshment break.",
-        }
+    def _parse_action(self, decision):
+        """Simple action parser (temp implementation)"""
+        try:
+            cmd_part = decision.split("ACTION:")[1].strip()
+            return {
+                "command": cmd_part,
+                "module": "blockchain_transaction_executor" if "send" in cmd_part else "generic",
+                "params": {"instruction": cmd_part}
+            }
+        except:
+            return None
 
-        return [evaluation_map[obs] for obs in observations if obs in evaluation_map]
-
-    async def execute_decisions(self, evaluations):
-        """
-        Execute the decisions made based on the evaluations.
-        """
-        decisions = []
-        for evaluation in evaluations:
-            print(f"Nova: Executing decision: {evaluation}")
-            if "resource optimization" in evaluation:
-                print("Nova: Freeing up memory...")
-            elif "pausing GPU-intensive tasks" in evaluation:
-                print("Nova: Pausing GPU tasks...")
-            elif "taking a break" in evaluation:
-                print("Nova: Summarizing morning progress...")
-            elif "quick stretch" in evaluation:
-                print("Nova: Suggesting a quick stretch break...")
-
-            decisions.append(evaluation)
-
-        return decisions
+    def _validate_action(self, action):
+        """Basic safety checks"""
+        if "send" in action["command"] and "all funds" in action["command"]:
+            print("Blocking dangerous funds transfer!")
+            return False
+        return True
