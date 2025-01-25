@@ -12,7 +12,10 @@ class TimeContextAwarenessEngine:
         timezone, weekday, and part of the day.
         """
         now = self.fetch_current_time()
+        current_time = datetime.now()  # Define current_time correctly
+
         context = {
+            "current_time": current_time.strftime("%Y-%m-%d %H:%M:%S"),
             "datetime": now,
             "date": self.format_date(now),
             "time": self.format_time(now),
