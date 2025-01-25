@@ -13,7 +13,7 @@ class WeatherEngine:
         # export OPENWEATHERMAP_API_KEY="your_api_key"
         self.api_key = os.environ.get("OPENWEATHERMAP_API_KEY", "")
 
-    def gather_context(self, location="London"):
+    def gather_context(self, location="Boone"):
         """
         Fetches current weather data from an external API.
         """
