@@ -11,6 +11,13 @@ class QuestDBConnector:
             dbname="qdb"
         )
         self.cursor = self.connection.cursor()
+    
+    async def batch_insert(self, table: str, columns: list, records: list):
+        query = f"INSERT INTO {table} ({','.join(columns)}) VALUES "
+        query += ",".join([f"({','.join(map(str, row))})" for row in records])
+        
+        self.cursor.execute(query)
+        self.connection.commit()
 
     def save_context_snapshot(self, key, value):
         query = """
