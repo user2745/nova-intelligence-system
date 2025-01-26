@@ -1,70 +1,67 @@
 # llm_mafia.py
 from rx import operators as ops
-import requests  # For API calls to your LLM
-import random
+import requests
 import json
 
 class DeepThinkMafia:
     def __init__(self, ucp):
         self.ucp = ucp
         self.model_name = "deepseek-llm"
-        self.llm_endpoints = [  
-            # "http://deepthink-01:11434",  
-            "http://localhost:11434/api/chat"  
-        ]  
-        # Subscribe to commands + context
+        self.llm_endpoint = "http://localhost:11434/api/chat"
+
+        # Subscribe only to chat commands with context
         self.ucp.command_stream.pipe(
+            ops.filter(lambda cmd: cmd.get("action") == "chat"),
             ops.with_latest_from(self.ucp.context_stream),
-            ops.map(lambda pair: {"command": pair[0], "context": pair[1]})
-        ).subscribe(self._process_command)
+            ops.map(lambda pair: (pair[0], pair[1]))
+        ).subscribe(self._handle_chat)
 
-    def _process_command(self, data):
-        """Let the LLM decide the fate of the command."""
-        command = data["command"]
-        context = data["context"]
-
-        # Build LLM prompt
+    def _handle_chat(self, data):
+        """Handle chat commands with real-time context"""
+        command, context = data
+        
+        # Build context-aware prompt
         prompt = f"""
-        [Nova System Decision]
-        Command: {json.dumps(command)}
-        Context: {json.dumps(context)}
-        Should we execute this? If yes, format response as {{"action": "...", "params": {{}}}}
+        [Nova System - Current Context]
+        Time: {context.get('time', 'unknown')}
+        CPU: {context.get('system', {}).get('cpu', '?')}%
+        Memory: {context.get('system', {}).get('memory', '?')}%
+        Wallet: {context.get('wallet', {}).get('balance', '?')} ETH
+
+        [User Message]
+        {command.get('content', '')}
+
+        [Response Requirements]
+        - Keep responses under 2 sentences
+        - Reference system context where relevant
+        - Be helpful and concise
         """
 
-        # Call DeepThink-r1 API (replace with actual API call)
-        llm_response = self._call_llm(prompt)
-        
-        # Emit new action to the UCP
-        self.ucp.emit_command(llm_response)
-
-    def _call_llm(self, prompt: str):  
-        chosen_llm = random.choice(self.llm_endpoints)  # Chaos load balancing
         try:
+            # Get LLM response
             response = requests.post(
-                chosen_llm,
+                self.llm_endpoint,
                 json={
                     "model": self.model_name,
                     "messages": [{"role": "user", "content": prompt}],
                     "stream": False
                 },
-            )
-            response.raise_for_status()  # Ensure the request succeeded
-            result = response.json()  # Parse the JSON response
+                timeout=5
+            ).json()
 
-            # Validate that the LLM's output matches the expected format
-            if isinstance(result, dict) and "action" in result:
-                return result
-            else:
-                print(f"⚠️ Invalid LLM response format: {result}")
-                return {
-                    "action": "error",
-                    "params": {"message": "LLM response format invalid"}
+            # Emit formatted response
+            self.ucp.emit_response({
+                "action": "chat_response",
+                "session_id": command.get("session_id"),
+                "content": response['message']['content'],
+                "context": {
+                    "timestamp": context.get('time'),
+                    "system_stats": context.get('system')
                 }
+            })
 
-        except requests.exceptions.RequestException as e:
-            print(f"💥 LLM request failed: {e}")
-            return {
+        except Exception as e:
+            self.ucp.emit_response({
                 "action": "error",
-                "params": {"message": f"LLM request failed: {str(e)}"}
-            }
-    
+                "message": f"Failed to process chat: {str(e)}"
+            })

@@ -1,4 +1,5 @@
 # main.py
+import json
 from ucp_pubsub import UCPPubSub
 from blockchain_merc import EVMMercenaries
 from context_cartels import TimeCartel, SystemSnitch, WalletSurveillance
@@ -20,13 +21,16 @@ async def main():
     )
 
     ucp.context_stream.subscribe(
-        lambda ctx: print(f"🌍 [CONTEXT] {ctx}")
+        lambda ctx: print(f"🌍 [CONTEXT] {json.dumps(ctx, indent=2)}")
     )
     # Log all responses
     ucp.response_stream.subscribe(
         lambda resp: print(f"📢 [RESPONSE] {resp}")
     )
     # ================================
+
+    ucp.emit_context({"status": "ready"}) # Notify the world
+
 
     # Context engines
     EVMMercenaries(ucp)
