@@ -7,7 +7,7 @@ import asyncio
 import os
 import psutil
 import subprocess
-from engines.modules.blockchain_wallet import BlockchainWallet
+from utils.blockchain_wallet import BlockchainWallet
 
 class TimeCartel:
     def __init__(self, ucp):
