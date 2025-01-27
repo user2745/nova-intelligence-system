@@ -1,13 +1,30 @@
 # ucp_pubsub.py  
 from rx.subject import Subject, BehaviorSubject  
 from ucp import UCPClient, UCPServer
+from datetime import datetime
 import json
 
 class UCPPubSub:  
     def __init__(self):  
         # Internal RxPy streams
         self.command_stream = Subject()
-        self.context_stream = BehaviorSubject({"status": "booting"})
+        self.context_stream = BehaviorSubject({
+        "status": "booting",
+        "system": {
+            "cpu_usage": 0.0,
+            "memory_usage": 0.0,
+            "disk_usage": 0.0,
+            "my_cpu_usage": 0.0,
+            "my_memory_usage": 0.0
+        },
+        "wallet": {
+            "balance": 0.0,
+            "address": "",
+            "transaction_count": 0,
+            "gas_fee": 0.0
+        },
+        "time": datetime.now().isoformat()
+    })
         self.response_stream = Subject()
         self.transaction_stream = Subject()
 
