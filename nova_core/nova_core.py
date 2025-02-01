@@ -4,6 +4,9 @@ from .core_identity import CoreIdentity  # Fixed import
 from .emotional_model import EmotionalPhysics  # Fixed import
 from .autonomous_engine import AutonomyEngine  # Fixed import
 from .llm_mafia import DeepThinkMafia  # Add missing import
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 class NovaCore:
     def __init__(self, ucp):
@@ -23,7 +26,8 @@ class NovaCore:
     def _process_state_update(self, state):
         """React to distributed state updates."""
         print("State updated:", state)
-        # Handle any specific logic based on updated state.
+        logging.info(f"🚀 [STATE UPDATE] on {self.ucp.ucp_client.device_id}: {state}")
+
 
     def _process_context(self, context):
 
