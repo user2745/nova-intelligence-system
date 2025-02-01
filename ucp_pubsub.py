@@ -24,7 +24,11 @@ class UCPPubSub:
             "gas_fee": 0.0
         },
         "time": datetime.now().isoformat()
-    })
+        })
+
+
+        self.state_stream = BehaviorSubject({});
+
         self.response_stream = Subject()
         self.transaction_stream = Subject()
 
@@ -32,6 +36,10 @@ class UCPPubSub:
         self.ucp_client = UCPClient(device_id="NovaCore", broker_address="100.115.157.25")
         self.ucp_client.connect()
         self.ucp_client.subscribe("ucl/commands/NovaCore")
+
+        # Connection to the UCPClient for distributed state
+
+        self.ucp_client.subscribe("ucl/state/NovaCore");
 
         # Forward commands from UCPClient to internal streams
         self.ucp_client.set_message_handler(self._handle_incoming_message)
@@ -41,13 +49,21 @@ class UCPPubSub:
             lambda resp: self.ucp_client.publish("ucl/responses/NovaCore", resp)
         )
 
+        # Forward context from internal streams to UCPClient
+        self.state_stream.subscribe(
+            lambda state: self.ucp_client.publish("ucl/state/NovaCore", json.dumps(state))
+        )
+
         # Start heartbeat
         self.ucp_client.start_heartbeat(interval=10)
 
     def _handle_incoming_message(self, topic, message):
         try:
             command = json.loads(message)
-            self.command_stream.on_next(command)
+            if topic == "ucl/state/NovaCore":
+                self._merge_state(command)
+            else:
+                self.command_stream.on_next(command)
         except json.JSONDecodeError:
             print(f"Invalid JSON received: {message}")
   
@@ -63,3 +79,15 @@ class UCPPubSub:
 
     def emit_response(self, response: dict):  
         self.response_stream.on_next(response)  
+
+    def emit_state(self, state_update: dict):
+        """Update and propagate state"""
+        current_state = self.state_stream.value
+        merged_state = {**current_state, **state_update}  # Merge changes
+        self.state_stream.on_next(merged_state)
+
+    def _merge_state(self, incoming_state):
+        """Merge incoming state updates from other Nova instances"""
+        current_state = self.state_stream.value
+        merged_state = {**current_state, **incoming_state}  # Merge dictionaries
+        self.state_stream.on_next(merged_state)  # Apply merged state

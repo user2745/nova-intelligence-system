@@ -12,11 +12,18 @@ class NovaCore:
         self.emotions = EmotionalPhysics(self.ucp, self.identity)
         self.autonomy = AutonomyEngine(self.identity)
         self.llm = DeepThinkMafia(self.ucp, self.identity)
+
+        self.ucp.state_stream.subscribe(self._process_state_update)
         
         # Decision loop
         self.ucp.context_stream.pipe(
             ops.throttle_first(1)
         ).subscribe(self._process_context)
+
+    def _process_state_update(self, state):
+        """React to distributed state updates."""
+        print("State updated:", state)
+        # Handle any specific logic based on updated state.
 
     def _process_context(self, context):
 
