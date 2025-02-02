@@ -35,12 +35,13 @@ class UCPPubSub:
         self.transaction_stream = Subject()
 
         # External UCPClient for Flutter communication
-        self.ucp_client = UCPClient(device_id="NovaCore", broker_address="100.115.157.25")
+        self.ucp_client = UCPClient(device_id="NovaCore", broker_address="localhost")
         self.ucp_client.connect()
+
+        # Subscribe to incoming commands
         self.ucp_client.subscribe("ucl/commands/NovaCore")
 
-        # Connection to the UCPClient for distributed state
-
+        # Subscribe to incoming state messages (distributed sync)
         self.ucp_client.subscribe("ucl/state/NovaCore");
 
         # Forward commands from UCPClient to internal streams
@@ -54,8 +55,9 @@ class UCPPubSub:
         # Subscribe to state updates and persist them
         self.state_stream.subscribe(self._persist_state)
 
-        # Subscribe to incoming state messages (distributed sync)
-        self.subscribe_to_state_updates()
+
+
+
 
         # Broadcast initial state after 3 seconds (gives time to sync if others exist)
         asyncio.create_task(self._broadcast_initial_state())
@@ -67,9 +69,13 @@ class UCPPubSub:
         try:
             command = json.loads(message)
             if topic == "ucl/state/NovaCore":
+                print(f"📡 Received state update: {message}")
                 self._merge_state(command)
-            else:
+            elif topic == "ucl/commands/NovaCore":
+                print(f"📡 Received command: {command}")
                 self.command_stream.on_next(command)
+            else:
+                print(f"Unknown topic: {topic}")
         except json.JSONDecodeError:
             print(f"Invalid JSON received: {message}")
   
@@ -108,17 +114,24 @@ class UCPPubSub:
         self.ucp_client.publish("ucl/state/NovaCore", json.dumps(merged_state))  # Sync with network
 
 
-    def _merge_state(self, incoming_state):
+    def _merge_state(self, incoming_update):
         """Merge incoming state updates from other Nova instances."""
         current_state = self.state_stream.value
         merged_state = {**current_state}
+        timestamp = datetime.now().isoformat()
 
-        for key, value in incoming_state.items():
+        for key, value in incoming_update.items():
+            # Ensure value is in the expected format
+            if not isinstance(value, dict):
+                value = {"value": value, "timestamp": timestamp}  # Wrap it properly
+
+            # Merge state, keeping only newer timestamps
             if key not in merged_state or value["timestamp"] > merged_state[key]["timestamp"]:
                 merged_state[key] = value
 
         print(f"🔄 Merging state: {merged_state}")
         self.state_stream.on_next(merged_state)
+
     
     def _load_state(self):
         """Load state from a local file if it exists, otherwise return default."""
@@ -150,15 +163,3 @@ class UCPPubSub:
                 "system_health": {"cpu_usage": 0, "memory_usage": 0},
                 "timestamp": datetime.now().isoformat(),
             })
-    def subscribe_to_state_updates(self):
-        """Listen for incoming state updates and merge."""
-        self.ucp_client.subscribe("ucl/state/NovaCore")
-
-    def handle_state_message(topic, message):
-            try:
-                incoming_state = json.loads(message)
-                self._merge_state(incoming_state)
-            except json.JSONDecodeError:
-                print(f"⚠️ Invalid state JSON received: {message}")
-            
-            self.ucp_client.set_message_handler(handle_state_message)
