@@ -24,9 +24,19 @@ class NovaCore:
         ).subscribe(self._process_context)
 
     def _process_state_update(self, state):
-        """React to distributed state updates."""
-        print("State updated:", state)
-        logging.info(f"🚀 [STATE UPDATE] on {self.ucp.ucp_client.device_id}: {state}")
+        """Ensure all devices receive and apply the state update instantly."""
+        print(f"🚀 [STATE UPDATE] on {self.ucp.ucp_client.device_id}: {state}")
+
+        # Store the last state (to detect changes)
+        last_state = getattr(self, "_last_state", {})
+
+        # Prevent recursive re-emission by checking if the state actually changed
+        if state != last_state:
+            self.ucp.emit_state(state)  # Publish updated state to all connected devices
+
+        # Update local state tracking
+        self._last_state = state
+
 
 
     def _process_context(self, context):

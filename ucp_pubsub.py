@@ -74,6 +74,9 @@ class UCPPubSub:
             elif topic == "ucl/commands/NovaCore":
                 print(f"📡 Received command: {command}")
                 self.command_stream.on_next(command)
+            elif topic == "ucl/task_queue/NovaCore":
+                print(f"📡 Received task queue update: {command}")
+                self.emit_context({"task_queue": command})
             else:
                 print(f"Unknown topic: {topic}")
         except json.JSONDecodeError:
@@ -93,25 +96,19 @@ class UCPPubSub:
         self.response_stream.on_next(response)  
 
     def emit_state(self, state_update: dict):
-        """Update and distribute state, including local persistence."""
+        """Update state only if something changed and publish to UCP for global sync."""
         current_state = self.state_stream.value
         timestamp = datetime.now().isoformat()
 
-        # Attach timestamp to new updates
+        # Only store new values, preventing unnecessary updates
+        updated_state = {}
         for key, value in state_update.items():
-            if isinstance(value, dict) and "value" in value:
-                state_update[key] = {"value": value["value"], "timestamp": timestamp}
-            else:
-                state_update[key] = {"value": value, "timestamp": timestamp}
+            if key not in current_state or current_state[key] != value:
+                updated_state[key] = {"value": value, "timestamp": timestamp}
 
-        # Merge states, keeping the most recent timestamp
-        merged_state = {**current_state}
-        for key, value in state_update.items():
-            if key not in merged_state or value["timestamp"] > merged_state[key]["timestamp"]:
-                merged_state[key] = value
-
-        self.state_stream.on_next(merged_state)
-        self.ucp_client.publish("ucl/state/NovaCore", json.dumps(merged_state))  # Sync with network
+        if updated_state:  # Only emit if something actually changed
+            self.state_stream.on_next({**current_state, **updated_state})
+            self.ucp_client.publish("ucl/state/NovaCore", json.dumps(updated_state))
 
 
     def _merge_state(self, incoming_update):
