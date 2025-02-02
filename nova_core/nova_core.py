@@ -39,9 +39,28 @@ class NovaCore:
         # Autonomous decision
         action = self.autonomy.choose_action(context)
         
-        if action == 'speak_warning':
+            # 'observe',
+            # 'speak',
+            # 'listen',
+            # 'sleep',
+            # 'speak_warning',
+            # 'throttle_system',
+            # 'execute_transaction'
+
+        if action == 'observe':
+            logging.info("👀 [OBSERVE] Nova is observing the environment."
+            f" CPU: {context.get('system', {}).get('cpu_usage', 0)}%")
+        elif action == 'speak':
+            logging.info("🗣 [SPEAK] Nova is speaking.")
+        elif action == 'listen':
+            logging.info("👂 [LISTEN] Nova is listening.")
+        elif action == 'sleep':
+            logging.info("💤 [SLEEP] Nova is sleeping.")
+        elif action == 'throttle_system':
+            logging.info("🔧 [THROTTLE] Nova is throttling the system.")
+        elif action == 'speak_warning':
             prompt = self._build_warning_prompt(context)
-            response = "The system is under heavy load. Please consider reducing your workload."
+            response = '🚨 [WARNING] High Resource use detected! ' + prompt
             self.ucp.emit_response(response)
         elif action == 'execute_transaction':
             self._execute_blockchain_action(context)

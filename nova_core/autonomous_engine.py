@@ -11,6 +11,9 @@ class AutonomyEngine:
         # Action space
         self.actions = [
             'observe',
+            'speak',
+            'listen',
+            'sleep',
             'speak_warning',
             'throttle_system',
             'execute_transaction'
@@ -29,7 +32,9 @@ class AutonomyEngine:
         
         # Exploration vs exploitation
         if np.random.rand() < 0.3 or state not in self.q_table:
-            return np.random.choice(self.actions)
+            # Instead of choosing a random action, choose the action with the highest average reward
+            action_rewards = {action: self.q_table.get(state, {}).get(action, 0) for action in self.actions}
+            return max(action_rewards, key=action_rewards.get)
         else:
             return max(self.q_table[state], key=self.q_table[state].get)
 
