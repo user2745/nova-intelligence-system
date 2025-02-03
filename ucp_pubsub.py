@@ -10,23 +10,9 @@ class UCPPubSub:
     def __init__(self):  
         # Internal RxPy streams
         self.command_stream = Subject()
-        self.context_stream = BehaviorSubject({
-        "status": "booting",
-        "system": {
-            "cpu_usage": 0.0,
-            "memory_usage": 0.0,
-            "disk_usage": 0.0,
-            "my_cpu_usage": 0.0,
-            "my_memory_usage": 0.0
-        },
-        "wallet": {
-            "balance": 0.0,
-            "address": "",
-            "transaction_count": 0,
-            "gas_fee": 0.0
-        },
-        "time": datetime.now().isoformat()
-        })
+        self.context_stream = Subject() # Default empty context
+
+        self.intent_stream = Subject()
 
         self.state_file = "nova-state.json"
         self.state_stream = BehaviorSubject(self._load_state());
@@ -44,6 +30,12 @@ class UCPPubSub:
         # Subscribe to incoming state messages (distributed sync)
         self.ucp_client.subscribe("ucl/state/NovaCore");
 
+        # Subscribe to incoming context messages
+        self.ucp_client.subscribe("ucl/task_queue/NovaCore");
+
+        self.ucp_client.subscribe("ucl/intents/NovaCore");
+
+
         # Forward commands from UCPClient to internal streams
         self.ucp_client.set_message_handler(self._handle_incoming_message)
 
@@ -55,47 +47,54 @@ class UCPPubSub:
         # Subscribe to state updates and persist them
         self.state_stream.subscribe(self._persist_state)
 
-
-
-
-
-        # Broadcast initial state after 3 seconds (gives time to sync if others exist)
-        asyncio.create_task(self._broadcast_initial_state())
+        # # Broadcast initial state after 3 seconds (gives time to sync if others exist)
 
         # Start heartbeat
         self.ucp_client.start_heartbeat(interval=10)
 
+    # This takes globally emitted messages and forwards them to the appropriate internal streams
     def _handle_incoming_message(self, topic, message):
         try:
             command = json.loads(message)
             if topic == "ucl/state/NovaCore":
                 print(f"📡 Received state update: {message}")
-                self._merge_state(command)
+                self.state_stream.on_next(command)
             elif topic == "ucl/commands/NovaCore":
                 print(f"📡 Received command: {command}")
                 self.command_stream.on_next(command)
             elif topic == "ucl/task_queue/NovaCore":
                 print(f"📡 Received task queue update: {command}")
                 self.emit_context({"task_queue": command})
+            elif topic == "ucl/intents/NovaCore":
+                print(f"📡 Received intent: {command}")
+                self.intent_stream.on_next(command) 
             else:
-                print(f"Unknown topic: {topic}")
+                    print(f"Unknown topic: {topic} and message: {message}")
         except json.JSONDecodeError:
             print(f"Invalid JSON received: {message}")
   
 
     def emit_command(self, command: dict):  
-        self.command_stream.on_next(command)  
+        print(f"📡 Emitting command: {command}")
+        self.ucp_client.publish("ucl/commands/NovaCore", json.dumps(command))
+
+    def emit_intent(self, intent: dict):
+        print(f"📡 Emitting intent: {intent}")
+        self.ucp_client.publish("ucl/intents/NovaCore", json.dumps(intent))
+
+
 
     # ucp_pubsub.py
     def emit_context(self, context: dict):
-        current_context = self.context_stream.value
-        merged_context = {**current_context, **context}  # Merge dictionaries
-        self.context_stream.on_next(merged_context)
+        print(f"📡 Emitting context: {context}")
+        self.ucp_client.publish("ucl/context/NovaCore", json.dumps(context))
 
-    def emit_response(self, response: dict):  
-        self.response_stream.on_next(response)  
+    def emit_response(self, response: dict):
+        print(f"📡 Emitting response: {response}")
+        self.ucp_client.publish("ucl/responses/NovaCore", json.dumps(response))  
 
     def emit_state(self, state_update: dict):
+        print(f"📡 Emitting state update: {state_update}")
         """Update state only if something changed and publish to UCP for global sync."""
         current_state = self.state_stream.value
         timestamp = datetime.now().isoformat()
@@ -107,27 +106,7 @@ class UCPPubSub:
                 updated_state[key] = {"value": value, "timestamp": timestamp}
 
         if updated_state:  # Only emit if something actually changed
-            self.state_stream.on_next({**current_state, **updated_state})
             self.ucp_client.publish("ucl/state/NovaCore", json.dumps(updated_state))
-
-
-    def _merge_state(self, incoming_update):
-        """Merge incoming state updates from other Nova instances."""
-        current_state = self.state_stream.value
-        merged_state = {**current_state}
-        timestamp = datetime.now().isoformat()
-
-        for key, value in incoming_update.items():
-            # Ensure value is in the expected format
-            if not isinstance(value, dict):
-                value = {"value": value, "timestamp": timestamp}  # Wrap it properly
-
-            # Merge state, keeping only newer timestamps
-            if key not in merged_state or value["timestamp"] > merged_state[key]["timestamp"]:
-                merged_state[key] = value
-
-        print(f"🔄 Merging state: {merged_state}")
-        self.state_stream.on_next(merged_state)
 
     
     def _load_state(self):
@@ -145,18 +124,3 @@ class UCPPubSub:
         """Persist the current state to local storage."""
         with open(self.state_file, "w") as f:
             json.dump(state, f)
-    
-    async def _broadcast_initial_state(self):
-        """Broadcast initial state if no other device provides it first."""
-        await asyncio.sleep(3)  # Wait for possible incoming state sync
-
-        if not self.state_stream.value:
-            print("⚡ No state detected. Seeding new state.")
-            self.emit_state({
-                "initialized": True,
-                "mood": "neutral",
-                "last_action": "idle",
-                "task_queue": [],
-                "system_health": {"cpu_usage": 0, "memory_usage": 0},
-                "timestamp": datetime.now().isoformat(),
-            })

@@ -21,21 +21,22 @@ class DeepThinkMafia:
     def _build_prompt(self, command, context):
         traits = self.core.personality.value
         mood = self.core.emotional_state.value['mood']
-        
+        day_phase = context.get('day_phase')
+        time = context.get('time')
         return f"""
         You are Nova, an advanced AI with a complex personality matrix, created by Kevin Kamto. You are currently in a {mood} mood.
         [Your (Nova) Current Configuration]
-        Personality: {traits}
-        Emotional State: {mood}
+        Your Personality Traits: {traits}
+        Right now, your emotional state is: {mood}
         Focus: {context.get('focus', 'general')}
 
         [Contextual Information]
-        current_timestamp: {context.get('time')},
+        It is currently {day_phase} ({time}).
         System Information: {context.get('system')},
         Wallet Information: {context.get('wallet')}
         
         [Response Requirements]
-        - The Contextual information is your real life contextual environment
+        - The Contextual information is the real life contextual environment
         - your current configuration is your personality and emotional state
         - your response should take all this information into account, including your current mood: {mood}
         - Never respond with your thought process or thinking, only as Nova and only generate a response to Kevin Kamto's Input
@@ -61,7 +62,7 @@ class DeepThinkMafia:
     def _handle_chat(self, data):
         """Handle chat with core identity integration"""
         command, context = data
-        
+        print(f"🤖 Nova processing chat: {command}")
         try:
             # Build identity-aware prompt
             prompt = self._build_prompt(command, context)

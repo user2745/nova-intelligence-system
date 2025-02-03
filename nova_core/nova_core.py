@@ -4,6 +4,7 @@ from .core_identity import CoreIdentity  # Fixed import
 from .emotional_model import EmotionalPhysics  # Fixed import
 from .autonomous_engine import AutonomyEngine  # Fixed import
 from .llm_mafia import DeepThinkMafia  # Add missing import
+from .intent_processing_engine import IntentProcessingEngine
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -16,8 +17,7 @@ class NovaCore:
         self.autonomy = AutonomyEngine(self.identity)
         self.llm = DeepThinkMafia(self.ucp, self.identity)
 
-        self.ucp.state_stream.subscribe(self._process_state_update)
-        
+        # Subscribe to context updates
         # Decision loop
         self.ucp.context_stream.pipe(
             ops.throttle_first(1)
@@ -40,6 +40,8 @@ class NovaCore:
 
 
     def _process_context(self, context):
+
+        print(f"🔍 [CONTEXT UPDATE] on {self.ucp.ucp_client.device_id}: {context}")
 
         old_state = self.autonomy.get_state_hash(context)
 
@@ -89,10 +91,6 @@ class NovaCore:
         [Action Request]
         Compose urgent warning about these conditions
         """
-
-    def _execute_blockchain_action(self, context):
-        # Placeholder for blockchain execution
-        pass
 
     def _calculate_reward(self, action, context):
         """Simplified reward function"""

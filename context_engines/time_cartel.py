@@ -9,8 +9,21 @@ class TimeCartel:
 
     async def _spam_time(self):
         while True:
+            now = datetime.now()
             self.ucp.emit_context({
-                "time": datetime.now().isoformat()
+                "time": now.isoformat(),
+                "hour": now.hour,
+                "minute": now.minute,
+                "day_phase": self._get_day_phase(now.hour)
             })
             await asyncio.sleep(1)
 
+    def _get_day_phase(self, hour):
+        if 5 <= hour < 12:
+            return "morning"
+        elif 12 <= hour < 18:
+            return "afternoon"
+        elif 18 <= hour < 22:
+            return "evening"
+        else:
+            return "night"

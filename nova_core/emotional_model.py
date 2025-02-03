@@ -23,6 +23,11 @@ class EmotionalPhysics:
         new_stress += (10 - float(context.get('wallet', {}).get('balance', 10))) / 100
         new_stress -= self.STRESS_DECAY  # Natural decay
         
+        if context.get("day_phase") == "morning":
+            new_stress -= 0.05  # More refreshed
+        elif context.get("day_phase") == "night":
+            new_stress += 0.05  # More exhaustion effect
+
         # Clamp between 0-1
         new_stress = max(0, min(1, new_stress))
         
