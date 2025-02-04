@@ -3,6 +3,7 @@ from rx import operators as ops
 import requests
 import json
 from nova_core.core_identity import CoreIdentity
+import asyncio
 
 class DeepThinkMafia:
     def __init__(self, ucp, core: CoreIdentity):
@@ -11,40 +12,76 @@ class DeepThinkMafia:
         self.model_name = "deepseek-llm"
         self.llm_endpoint = "http://localhost:11434/api/chat"
 
-        # Subscribe to chat commands with core identity context
+        # Store latest context
+        self.latest_context = {}
+        self.ucp.context_stream.subscribe(lambda ctx: setattr(self, 'latest_context', ctx))
+
+
+        # Modified subscription to handle commands even without context
         self.ucp.command_stream.pipe(
-            ops.filter(lambda cmd: cmd.get("action") == "chat"),
-            ops.with_latest_from(self.ucp.context_stream),
-            ops.map(lambda pair: (pair[0], pair[1]))
-        ).subscribe(self._handle_chat)
+            ops.filter(lambda cmd: cmd.get("action") == "chat")
+        ).subscribe(lambda cmd: self._handle_chat((cmd, self.ucp.context_stream.value)))
+
+        # Add debug logging for subscription
+        print("🔌 DeepThinkMafia subscribed to command stream")
+
+        self.response_cache = {}  # Simple caching
+        self.retry_strategy = {
+            "max_attempts": 3,
+            "backoff_factor": 1.5
+        }
 
     def _build_prompt(self, command, context):
+        """Build a contextually-aware, personality-driven prompt for Nova's responses"""
+        
+        # Core identity and state
         traits = self.core.personality.value
         mood = self.core.emotional_state.value['mood']
-        day_phase = context.get('day_phase')
-        time = context.get('time')
-        return f"""
-        You are Nova, an advanced AI with a complex personality matrix, created by Kevin Kamto. You are currently in a {mood} mood.
-        [Your (Nova) Current Configuration]
-        Your Personality Traits: {traits}
-        Right now, your emotional state is: {mood}
-        Focus: {context.get('focus', 'general')}
+        focus = context.get('focus', 'general')
+        
+        # Environmental context
+        time_context = {
+            'phase': context.get('day_phase', 'day'),
+            'time': context.get('time', 'unknown'),
+            'hour': context.get('hour', 0)
+        }
+        
+        # System state formatting
+        sys_info = context.get('system', {})
+        sys_status = {
+            'cpu': f"{sys_info.get('cpu_usage', 0)}%",
+            'memory': f"{sys_info.get('memory_usage', 0)}%",
+            'disk': f"{sys_info.get('disk_usage', 0)}%"
+        }
+        
+        # Wallet state formatting
+        wallet = context.get('wallet', {})
+        wallet_status = {
+            'balance': f"{wallet.get('balance', 0)} ETH",
+            'transactions': wallet.get('transaction_count', 0),
+            'gas': f"{wallet.get('gas_fee', 0)} gwei"
+        }
 
-        [Contextual Information]
-        It is currently {day_phase} ({time}).
-        System Information: {context.get('system')},
-        Wallet Information: {context.get('wallet')}
-        
-        [Response Requirements]
-        - The Contextual information is the real life contextual environment
-        - your current configuration is your personality and emotional state
-        - your response should take all this information into account, including your current mood: {mood}
-        - Never respond with your thought process or thinking, only as Nova and only generate a response to Kevin Kamto's Input
-        - Never break character
-        
-        [Kevin Kamto's Input]
-        {command.get('content', '')}
-        """
+        return f"""You are Nova, an advanced AI assistant with a distinct personality, created by Kevin Kamto.
+        [Core Identity]
+        • Personality: {traits}
+        • Current Mood: {mood}
+        • Focus Area: {focus}
+
+        [Environmental Context]
+        • Time: {time_context['time']} ({time_context['phase']})
+        • System Status: CPU {sys_status['cpu']}, Memory {sys_status['memory']}, Storage {sys_status['disk']}
+        • Wallet Status: {wallet_status['balance']}, {wallet_status['transactions']} transactions, Gas: {wallet_status['gas']}
+
+        [Behavioral Guidelines]
+        • Maintain consistent personality and emotional state
+        • Consider environmental context in responses
+        • Respond directly as Nova, without meta-commentary
+        • Stay in character at all times
+        • Adapt tone to current mood: {mood}
+
+        [Input from Kevin]
+        {command.get('content', '')}"""
 
     def generate(self, prompt):
         response = requests.post(
