@@ -10,7 +10,13 @@ class UCPPubSub:
     def __init__(self):  
         # Internal RxPy streams
         self.command_stream = Subject()
-        self.context_stream = Subject() # Default empty context
+        self.context_stream = BehaviorSubject({
+            'time': datetime.now().strftime("%H:%M:%S"),
+            'day_phase': 'day',
+            'system': {},
+            'wallet': {},
+            'focus': 'general'
+        }) # Default empty context
 
         self.intent_stream = Subject()
 
@@ -52,6 +58,9 @@ class UCPPubSub:
         # Start heartbeat
         self.ucp_client.start_heartbeat(interval=10)
 
+        self.context_ttl = 300  # 5 minutes
+        self.context_history = []
+
     # This takes globally emitted messages and forwards them to the appropriate internal streams
     def _handle_incoming_message(self, topic, message):
         try:
@@ -86,8 +95,24 @@ class UCPPubSub:
 
     # ucp_pubsub.py
     def emit_context(self, context: dict):
-        print(f"📡 Emitting context: {context}")
-        self.ucp_client.publish("ucl/context/NovaCore", json.dumps(context))
+        # Merge instead of replace context
+        current = self.context_stream.value
+        merged = self._smart_merge(current, context)
+        self.context_history.append({
+            "timestamp": datetime.now(),
+            "context": merged
+        })
+        self.context_stream.on_next(merged)
+        
+    def _smart_merge(self, old, new):
+        # Intelligent context merging
+        result = old.copy()
+        for k, v in new.items():
+            if isinstance(v, dict) and k in result:
+                result[k] = self._smart_merge(result[k], v)
+            else:
+                result[k] = v
+        return result
 
     def emit_response(self, response: dict):
         print(f"📡 Emitting response: {response}")
