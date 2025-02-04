@@ -1,5 +1,6 @@
 from rx import operators as ops
 from rx.subject import Subject
+from datetime import datetime
 import logging
 import json
 
@@ -7,6 +8,12 @@ class IntentProcessingEngine:
     def __init__(self, ucp):
         self.ucp = ucp
         self.active_intents = {}  # Track active intents
+        self.intent_handlers = {
+            'BootUp': self._handle_bootup,
+            'IdleCheck': self._handle_idle_check,
+            'ResourceAlert': self._handle_resource_alert,
+            'DeviceOnlineAnnouncement': self._handle_device_online,
+        }
 
         # Forward commands from UCPClient to internal streams
         ucp.intent_stream.subscribe(self._handle_intent)
@@ -24,22 +31,39 @@ class IntentProcessingEngine:
 
             logging.info(f"🟢 [Intent Received] {intent} with parameters {cmd}")
 
-            if intent == "BootUp":
-                self._handle_boot_up(parameters)
-            elif intent == "ShutDown":
-                self._handle_shut_down(parameters)
+            if intent in self.intent_handlers:
+                self.intent_handlers[intent](cmd)
             else:
                 logging.warning(f"🔴 [Unknown Intent] {intent}")
 
         except json.JSONDecodeError:
             print(f"Invalid JSON received: {cmd}")
 
-    def _handle_boot_up(self, parameters: dict):
-        print("Handling BootUp intent with parameters:", parameters)
+    def _handle_bootup(self, intent):
+        print("Handling BootUp intent")
         self._perform_health_check()
         self.ucp.emit_command({"action": "observe"})
         # Add BootUp handling logic here
         logging.info("BootUp intent handled successfully.")
+
+    def _handle_idle_check(self, intent):
+        """Handle idle check by reporting current status"""
+        self.ucp.emit_response("✅ System is operational")
+        return True
+
+    def _handle_resource_alert(self, intent):
+        """Handle resource alerts"""
+        warnings = intent.get('parameters', {}).get('warnings', [])
+        severity = intent.get('parameters', {}).get('severity', 'medium')
+        
+        if warnings:
+            self.ucp.emit_response(f"⚠️ Resource Alert ({severity}):\n" + "\n".join(warnings))
+        return True
+
+    def _handle_device_online(self, intent):
+        """Handle device online announcements"""
+        self.ucp.emit_response("🟢 Device is online and ready")
+        return True
 
     def _handle_shut_down(self, parameters: dict):
         print("Handling ShutDown intent with parameters:", parameters)
