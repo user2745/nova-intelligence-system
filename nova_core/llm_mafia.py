@@ -64,37 +64,51 @@ class DeepThinkMafia:
         command, context = data
         print(f"🤖 Nova processing chat: {command}")
         try:
+            # Ensure we have at least a minimal context if none is provided
+            if not context:
+                context = {
+                    'time': datetime.now().strftime("%H:%M:%S"),
+                    'day_phase': 'day',
+                    'system': {},
+                    'wallet': {},
+                    'focus': 'general'
+                }
+            
             # Build identity-aware prompt
             prompt = self._build_prompt(command, context)
+            print(f"🔍 Generated prompt: {prompt}")  # Debug log
             
             # Get LLM response
-            response = requests.post(
-                self.llm_endpoint,
-                json={
-                    "model": self.model_name,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "stream": False
-                },
-                timeout=5
-            ).json()
+            try:
+                response = self.generate(prompt)
+                print(f"📝 LLM Response: {response}")  # Debug log
+                
+                if not response or 'message' not in response:
+                    raise Exception("Invalid response from LLM")
 
-            # Store interaction in memory
-            self.core.record_episode(f"User: {command.get('content', '')}\nNova: {response['message']['content']}")
+                # Store interaction in memory
+                self.core.record_episode(f"User: {command.get('content', '')}\nNova: {response['message']['content']}")
 
-            # Emit response
-            self.ucp.emit_response({
-                "action": "chat_response",
-                "session_id": command.get("session_id"),
-                "content": response['message']['content'],
-                "context": {
-                    "timestamp": context.get('time'),
-                    "system_stats": context.get('system'),
-                    "mood": self.core.emotional_state.value['mood']
-                }
-            })
+                # Emit response
+                self.ucp.emit_response({
+                    "action": "chat_response",
+                    "session_id": command.get("session_id"),
+                    "content": response['message']['content'],
+                    "context": {
+                        "timestamp": context.get('time'),
+                        "system_stats": context.get('system'),
+                        "mood": self.core.emotional_state.value['mood']
+                    }
+                })
+
+            except requests.exceptions.RequestException as e:
+                print(f"❌ LLM request failed: {str(e)}")
+                raise
 
         except Exception as e:
+            print(f"❌ Error in chat handling: {str(e)}")
             self.ucp.emit_response({
                 "action": "error",
+                "session_id": command.get("session_id"),
                 "message": f"Failed to process chat: {str(e)}"
             })
