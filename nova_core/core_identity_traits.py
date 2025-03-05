@@ -1,18 +1,17 @@
 # core_identity.py
+import os
+import json
 from datetime import datetime
 import numpy as np
 from rx.subject import BehaviorSubject
 from sklearn.preprocessing import normalize
 
-class CoreIdentity:
+class CoreIdentityTraits:
     def __init__(self):
         # Dynamic personality matrix (traits x contexts)
-        self.personality = BehaviorSubject({
-            'curious': 0.8,
-            'cautious': 0.6,
-            'humor': 0.4,
-            'altruism': 0.7
-        })
+
+        self.identity_file = "core-identity.json"
+        self.personality = BehaviorSubject(self._load_identity())
         
         # Emotional state
         self.emotional_state = BehaviorSubject({
@@ -39,6 +38,17 @@ class CoreIdentity:
             'event': event,
             'emotional_state': self.emotional_state.value.copy()
         })
+
+    def _load_identity(self):
+        """Load state from a local file if it exists, otherwise return default."""
+        if os.path.exists(self.identity_file):
+            try:
+                with open(self.identity_file, "r") as f:
+                    return json.load(f)
+            except json.JSONDecodeError:
+                pass  # Corrupt file, return default
+
+        return {}  # Default state
 
     def calculate_concept_relationship(self, concept_a: str, concept_b: str):
         """Build semantic relationships"""

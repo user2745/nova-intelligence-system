@@ -7,15 +7,15 @@ from context_engines.time_cartel import TimeCartel
 from context_engines.system_snitch import SystemSnitch
 from context_engines.wallet_surveillance import WalletSurveillance
 from context_engines.portfolio_manager import CryptoPortfolioManager
-from nova_core.ping_pong import PingPong
-from nova_core.nova_core import NovaCore
+from execution.ping_pong import PingPong
+from nova_core.nova_core import NovaBrain
 
 async def main():
     max_retries = 3
     for attempt in range(max_retries):
         try:
             ucp = UCPPubSub()
-            nova = NovaCore(ucp)
+            nova = NovaBrain(ucp)
             
             # Context providers
             TimeCartel(nova.ucp)
@@ -30,9 +30,9 @@ async def main():
             # Test context engine
             PingPong(nova.ucp)
 
-            
-            await asyncio.sleep(1)  # Let systems initialize
             print("🌌 Nova is booting...")
+            await asyncio.sleep(5)  # Let systems initialize
+
             nova.ucp.emit_context({
                 "status": "live",
                 "system": {
