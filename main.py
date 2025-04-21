@@ -8,14 +8,14 @@ from context_engines.system_snitch import SystemSnitch
 from context_engines.wallet_surveillance import WalletSurveillance
 from context_engines.portfolio_manager import CryptoPortfolioManager
 from execution.ping_pong import PingPong
-from nova_core.nova_core import NovaBrain
+from nova_core.nova_brain_v3 import NovaBrainV3
 
 async def main():
     max_retries = 3
     for attempt in range(max_retries):
         try:
             ucp = UCPPubSub()
-            nova = NovaBrain(ucp)
+            nova = NovaBrainV3(ucp)
             
             # Context providers
             TimeCartel(nova.ucp)
