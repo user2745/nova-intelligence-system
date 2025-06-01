@@ -13,6 +13,8 @@ class IntentProcessingEngine:
             'IdleCheck': self._handle_idle_check,
             'ResourceAlert': self._handle_resource_alert,
             'DeviceOnlineAnnouncement': self._handle_device_online,
+            'EveningWrapUp': self._handle_evening_wrapup,
+            'LowBalanceWarning': self._handle_low_balance
         }
 
         # Forward commands from UCPClient to internal streams
@@ -49,6 +51,22 @@ class IntentProcessingEngine:
     def _handle_idle_check(self, intent):
         """Handle idle check by reporting current status"""
         self.ucp.emit_response("✅ System is operational")
+        return True
+    
+    def _handle_evening_wrapup(self, intent):
+        """Handle evening routine tasks"""
+        context = intent.get('context', {})
+        response = "Beginning evening wrap-up procedures"
+        self.ucp.emit_response(response)
+        logging.info(f"Evening wrap-up started with context: {context}")
+        return True
+
+    def _handle_low_balance(self, intent):
+        """Handle low balance warnings"""
+        balance = intent.get('context', {}).get('wallet', {}).get('balance', 0)
+        response = f"⚠️ Warning: Low balance detected ({balance} ETH)"
+        self.ucp.emit_response(response)
+        logging.warning(f"Low balance warning: {balance} ETH")
         return True
 
     def _handle_resource_alert(self, intent):
