@@ -17,16 +17,6 @@ async def main():
             ucp = UCPPubSub()
             nova = NovaBrainV3(ucp)
             
-            # Context providers
-            TimeCartel(nova.ucp)
-            SystemSnitch(nova.ucp)
-            WalletSurveillance(nova.ucp)
-            # SpeechRecognition(nova.ucp)
-
-            # Context consumers
-            CryptoPortfolioManager(nova.ucp)
-            IntentProcessingEngine(nova.ucp)
-
             # Test context engine
             PingPong(nova.ucp)
 
