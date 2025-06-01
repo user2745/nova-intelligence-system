@@ -16,3 +16,4 @@ sounddevice
 vosk
 scikit-learn
 coinbase
+networkx
