@@ -19,7 +19,11 @@ class NovaBrainV3:
         # Memory sets
         self.working_memory = {}
         self.declarative_memory = nx.Graph()
-        self.procedural_memory = []
+        self.procedural_memory = {
+            "rules": [],  # If-then rules
+            "skills": {},  # Complex action sequences
+            "habits": []  # Highly reinforced behaviors
+        }
 
         # Cognitive Sets
         self.chain_of_thought = []
@@ -102,108 +106,15 @@ class NovaBrainV3:
 
 
     def select_action(self):
-        """Select an action based on procedural memory rules (SMM B3)."""
-        for rule in sorted(self.procedural_memory, key=lambda r: r["weight"], reverse=True):
-            if rule["condition"](self.working_memory):
-                return rule["action"]
+        """Select an action based on consciousness and procedural memory."""
+
         return "idle"  # Default action if no rules match
 
     async def execute_action(self, action):
         """Execute the selected action and return the outcome."""
-        if action == "suggest_coffee":
-            # Simulate user interaction (in real setup, this would use NovaSpeechSynthesis)
-            self.ucp.emit_response({"action": "speak", "content": "Would you like coffee?"})
-            # Simulate outcome (replace with real user feedback in future)
-            return {"success": True, "feedback": "User accepted coffee"}
+        
         return {"success": False, "feedback": "No action taken"}
 
-    def calculate_priority(self, outcome):
-        """Calculate priority weight for a thought record (for pruning)."""
-        base_weight = 0.5
-        if outcome.get("success", False):
-            base_weight += 0.3
-        if self.emotional_state.value["stress"] > 0.5:  # High stress increases priority
-            base_weight += 0.2
-        return min(max(base_weight, 0.1), 1.0)  # Clamp between 0.1 and 1.0
-
-    def learn_from_outcome(self, thought_record):
-        action = thought_record["action"]
-        outcome = thought_record["outcome"]
-
-        # Reinforcement learning for procedural memory
-        for rule in self.procedural_memory:
-            if rule["action"] == action:
-                rule["weight"] += 0.1 if outcome.get("success", False) else -0.1
-                rule["weight"] = min(max(rule["weight"], 0.1), 1.0)
-
-        # Safe declarative memory updates
-        if action == "suggest_coffee":
-            if "coffee_preference" not in self.declarative_memory:
-                self.declarative_memory.add_node("coffee_preference", 
-                                            success_rate=0.5,
-                                            last_updated=datetime.now())
-            
-            node = self.declarative_memory.nodes["coffee_preference"]
-            if outcome.get("success", False):
-                node["success_rate"] = min(node.get("success_rate", 0.5) + 0.01, 1.0)
-            else:
-                node["success_rate"] = max(node.get("success_rate", 0.5) - 0.01, 0.0)
-            node["last_updated"] = datetime.now()
-
-    async def should_enter_sleep(self):
-        """Determine if Nova should enter a sleep cycle."""
-        # Simulate checking user presence (replace with real presence detection)
-        if not self.working_memory.get("user_present", False):
-            # Check if user has been absent for 4+ hours (simplified for now)
-            last_active = datetime.fromisoformat(self.working_memory.get("last_active", datetime.now().isoformat()))
-            if (datetime.now() - last_active).total_seconds() > 4 * 3600:
-                return True
-        return False
-
-    async def enter_sleep_cycle(self):
-        """Run the sleep cycle with pruning, reconsolidation, and dreaming."""
-        logging.info("Entering sleep cycle...")
-        
-        # Step 1: Pruning (Intentional Forgetting)
-        self.prune_thought_records()
-
-        # Step 2: Reconsolidation
-        self.reconsolidate_thought_records()
-
-        # Step 3: Dreaming (Creative Exploration)
-        self.dream()
-
-        logging.info("Sleep cycle complete.")
-
-    def prune_thought_records(self):
-        """Prune low-priority thought records (Intentional Forgetting)."""
-        threshold = 0.3  # Prune records with priority < 0.3
-        self.chain_of_thought = [
-            record for record in self.chain_of_thought
-            if record["priority_weight"] >= threshold
-        ]
-        logging.info(f"Pruned chain-of-thought. New length: {len(self.chain_of_thought)}")
-
-    def reconsolidate_thought_records(self):
-        """Summarize and update thought records (Memory Reconsolidation)."""
-        # Example: Summarize coffee suggestion outcomes
-        coffee_records = [r for r in self.chain_of_thought if r["action"] == "suggest_coffee"]
-        if coffee_records:
-            success_rate = sum(1 for r in coffee_records if r["outcome"]["success"]) / len(coffee_records)
-            consolidated = {
-                "timestamp": datetime.now().isoformat(),
-                "working_memory": {"hour": 8, "user_present": True},
-                "action": "suggest_coffee",
-                "outcome": {"success_rate": success_rate},
-                "priority_weight": 0.7,
-                "emotional_state": self.emotional_state.value.copy()
-            }
-            # Remove old coffee records and add consolidated one
-            self.chain_of_thought = [r for r in self.chain_of_thought if r["action"] != "suggest_coffee"]
-            self.chain_of_thought.append(consolidated)
-            logging.info(f"Reconsolidated coffee suggestions: {success_rate}")
-
-    def dream(self):
         """Generate hypothetical scenarios and rules during sleep (Dreaming Phase)."""
         # Example: Dream about suggesting tea instead of coffee on weekends
         if "previous_thought" in self.working_memory:
