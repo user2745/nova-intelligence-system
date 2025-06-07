@@ -1,8 +1,6 @@
 # main.py
 import asyncio
 from ucp_pubsub import UCPPubSub
-from context_engines.speech_recognition import SpeechRecognition
-from nova_core.intent_processing_engine import IntentProcessingEngine
 from context_engines.time_cartel import TimeCartel
 from context_engines.system_snitch import SystemSnitch
 from context_engines.wallet_surveillance import WalletSurveillance
