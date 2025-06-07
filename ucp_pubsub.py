@@ -26,6 +26,11 @@ class UCPPubSub:
         self.response_stream = Subject()
         self.transaction_stream = Subject()
 
+        # Streams for different cognitive processes
+        self.ventral_stream = Subject()  # For global context updates
+        self.dorsal_stream = Subject()   # For local context updates
+        self.conscious_stream = Subject()  # For conscious focus
+
         # External UCPClient for Flutter communication
         self.ucp_client = UCPClient(device_id="NovaCore", broker_address="localhost")
         self.ucp_client.connect()
