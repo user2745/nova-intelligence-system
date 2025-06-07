@@ -50,6 +50,12 @@ class SituationalAwareness:
 
     def __init__(self):
         self.models = {}
+        self.current_situation = {
+            "external_context": {},  # What's happening outside
+            "internal_context": {},  # NOVA's internal state
+            "temporal_context": {},  # Time-based patterns
+            "social_context": {}     # User state/needs
+        } # Each is its own situational model
 
     def add_model(self, model: SituationalModel):
         """Add a new situational model."""
