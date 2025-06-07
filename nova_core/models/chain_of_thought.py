@@ -22,7 +22,7 @@ class ThoughtBlock:
     def compute_hash(self) -> str:
         '''Compute the hash of the thought block using SHA-256.'''
         block_string = f"{self.index}{self.timestamp}{json.dumps(self.thought_data, sort_keys=True)}{self.prev_hash}{self.nonce}"
-        return hashlib.sha256(block_string).hexdigest()
+        return hashlib.sha256(block_string.encode('utf-8')).hexdigest()
     
     def mine_block(self, difficulty: int):
         '''Mine the block by finding a hash that starts with a certain number of zeros.'''

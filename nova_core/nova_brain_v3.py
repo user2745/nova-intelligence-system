@@ -2,11 +2,11 @@ import os
 import asyncio
 import time
 import json
-from nova_core.models.situational_awareness import SituationalAwareness
+from nova_core.models.situational_model import SituationalAwareness
 from nova_core.models.situational_model import SituationalModel
-from nova_core.memory.working_memory import WorkingMemory
-from nova_core.memory.declarative_memory import DeclarativeMemory
-from nova_core.memory.procedural_memory import ProceduralMemory
+from nova_core.models.working_memory import WorkingMemory
+from nova_core.models.declarative_memory import DeclarativeMemory
+from nova_core.models.procedural_memory import ProceduralMemory
 from nova_core.models.chain_of_thought import ChainOfThoughts
 from datetime import datetime
 from collections import defaultdict
@@ -28,7 +28,7 @@ class NovaBrainV3:
         self.procedural_memory = ProceduralMemory()      # For procedural knowledge
 
         # Cognitive Sets
-        self.chain_of_thought = ChainOfThoughts(device_id=ucp.device_id)
+        self.chain_of_thought = ChainOfThoughts(device_id="NovaCore")
 
         # Situational awareness
         self.situational_awareness = SituationalAwareness()
