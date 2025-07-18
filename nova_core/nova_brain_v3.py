@@ -51,3 +51,15 @@ class NovaBrainV3:
             # Maintain ~50ms cycle (SMM A4)
             elapsed = time.time() - start_time
             await asyncio.sleep(max(0.05 - elapsed, 0))
+    
+    def select_action(self):
+        wm = self.working_memory
+        af = wm.get("affordances", [])
+        # --- Exploration first ---
+        if random.random() < 0.8:               # ε-greedy exploration
+            return random.choice(af) if af else "idle"
+        # --- Very small learned bias example ---
+        for rule in self.procedural_memory["rules"]:
+            if rule["condition"](wm): 
+                return rule["action"]
+        return "idle"
