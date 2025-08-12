@@ -131,3 +131,8 @@ cython_debug/
 
 # Include all __pycache__ directories
 */__pycache__/
+
+# node
+node_modules/
+yarn.lock
+package-lock.json
