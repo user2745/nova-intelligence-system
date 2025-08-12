@@ -23,6 +23,18 @@ class ProceduralMemory:
     def __init__(self):
         self._rules: List[Rule] = []
 
+        self.add_rule(
+            name="ping_pong",
+            condition_fn=lambda ctx: (
+                isinstance(ctx.get("payload"), dict)
+                and "message" in ctx["payload"]
+                and "ping" in ctx["payload"]["message"].lower()
+            ),
+            goal="pong",
+            action_fn=lambda ctx: print("[Action] pong")
+        )
+
+
     # ‑‑‑ rule management ‑‑‑ -------------------------------------------------
     def add_rule(self, name: str, condition_fn: Callable[[dict], bool], goal: str,
                  action_fn: Callable[[dict], None]):

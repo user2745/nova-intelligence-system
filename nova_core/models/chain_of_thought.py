@@ -58,9 +58,9 @@ class ThoughtBlock:
         block.device_id = data.get('device_id', 'unknown')
         return block
     
-    def is_valid(self, prev_hash: str) -> bool:
+    def is_valid(self, prev_block) -> bool:
         """Check if the block is valid by comparing hashes and previous hash."""
-        if self.hash != self.calculate_hash():
+        if self.hash != self.compute_hash():
             return False
             
         # Check chain linkage
@@ -124,7 +124,7 @@ class ChainOfThoughts:
             # Validate before adding
             if new_block.is_valid(prev_block):
                 self.chain.append(new_block)
-                logging.info(f"💭 Thought added to chain: {thought_record.get('action', 'unknown')} | Chain length: {len(self.chain)}")
+                logging.info(f"💭 Thought added to chain: {thought_record.get('device_id')} | Chain length: {len(self.chain)}")
                 return True
             else:
                 logging.error(f"❌ Invalid thought block rejected")
