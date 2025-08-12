@@ -17,3 +17,6 @@ vosk
 scikit-learn
 coinbase
 networkx
+chromadb
+langchain-ollama==0.3.6
+langchain-core==0.3.72
