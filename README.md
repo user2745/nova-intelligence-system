@@ -69,7 +69,14 @@ Drives, Goals, Objectives, and Plans architecture:
    python -m pip install --upgrade pip
    ```
 
-4. **Start Nova**:
+4. **Set Environment Variables:**
+   - Create a `.env` file in the project root directory.
+   - Add your Ethereum wallet account private key like this:
+      ```env
+      WALLET_PRIVATE_KEY=your_ethereum_private_key_here
+      ```
+
+5. **Start Nova**:
    ```bash
    python main.py
    ```

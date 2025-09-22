@@ -1,6 +1,9 @@
 from utils.blockchain_wallet import BlockchainWallet
 import asyncio
 import os
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 class WalletSurveillance:
     def __init__(self, queue):
@@ -11,7 +14,7 @@ class WalletSurveillance:
         asyncio.create_task(self._monitor_wallet())
 
     async def _monitor_wallet(self):
-        private_key = os.environ.get("WALLET_PRIVATE_KEY", "")
+        private_key = os.getenv("WALLET_PRIVATE_KEY", "")
         wallet = BlockchainWallet(self.rpc_url, private_key)
         address = wallet.get_address()
         balance = wallet.get_balance()
