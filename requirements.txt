@@ -1,3 +1,4 @@
+python-dotenv
 psutil
 asyncio
 immutables
@@ -20,3 +21,4 @@ networkx
 chromadb
 langchain-ollama==0.3.6
 langchain-core==0.3.72
+langchain_chroma==0.2.6
