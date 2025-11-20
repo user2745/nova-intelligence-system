@@ -153,14 +153,10 @@ def run_research_task(task: str) -> str:
 # ----------------------
 
 if __name__ == "__main__":
-    # research_task = (
-    #     "Research the war in Sudan and provide a concise, up-to-date summary of "
-    #     "the current situation, key actors, humanitarian impact, and any recent "
-    #     "ceasefire or peace efforts."
-    # )
-
     research_task = (
-        "Research the latest news on president Trump"
+        "Research the war in Sudan and provide a concise, up-to-date summary of "
+        "the current situation, key actors, humanitarian impact, and any recent "
+        "ceasefire or peace efforts."
     )
 
     try:
