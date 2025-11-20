@@ -26,3 +26,5 @@ duckduckgo_search
 beautifulsoup4
 bs4
 requests
+ddgs
+piper-tts
