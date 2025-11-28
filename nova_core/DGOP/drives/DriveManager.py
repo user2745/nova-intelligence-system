@@ -1,38 +1,103 @@
 import logging
 import time
+from typing import Dict, Any
 
-from nova_core.DGOP.drives import TimeDrive, SleepDrive, CuriosityDrive
+class InternalDrive:
+    """Base class for a Drive."""
+    def __init__(self, name: str):
+        self.name = name
+        self.intensity = 0.0
+    
+    def update(self, context: Dict[str, Any]):
+        """Update intensity based on context."""
+        pass
 
+class WealthDrive(InternalDrive):
+    """
+    Drive: Resource Acquisition
+    Formula: (Target - Balance) * Opportunity
+    """
+    def __init__(self):
+        super().__init__("wealth")
+        self.target_balance = 0.0 # ETH
+        
+    def update(self, context: Dict[str, Any]):
+        wallet = context.get("external_context", {})
+        balance = wallet.get("balance", 0.0)
+        
+        # Simple logic: If below target, intensity rises.
+        if self.target_balance > 0:
+            deficit = max(0, self.target_balance - balance)
+            self.intensity = min(1.0, deficit / self.target_balance)
+        else:
+            self.intensity = 0.0
+
+class SecurityDrive(InternalDrive):
+    """
+    Drive: Order Maintenance
+    Formula: BaseAnxiety + (AnomalyScore * Sensitivity)
+    """
+    def __init__(self):
+        super().__init__("security")
+        self.base_anxiety = 0.1
+        
+    def update(self, context: Dict[str, Any]):
+        system = context.get("external_context", {})
+        cpu = system.get("cpu_usage", 0.0)
+        
+        # If CPU > 80%, Panic.
+        anomaly_score = 0.0
+        if cpu > 80:
+            anomaly_score = (cpu - 80) / 20.0 # 0.0 to 1.0
+            
+        self.intensity = min(1.0, self.base_anxiety + anomaly_score)
+
+class CuriosityDrive(InternalDrive):
+    """
+    Drive: Strategic Intelligence
+    Formula: (1.0 - RecentNewInformation)
+    """
+    def __init__(self):
+        super().__init__("curiosity")
+        self.last_insight_time = time.time()
+        
+    def update(self, context: Dict[str, Any]):
+        # Decay over time (boredom)
+        time_since_insight = time.time() - self.last_insight_time
+        boredom = min(1.0, time_since_insight / 300.0) # Max boredom after 5 mins
+        
+        self.intensity = boredom
 
 class DriveManager: 
     def __init__(self):
         self.drives = {
-            "time": TimeDrive(),
-            "sleep": SleepDrive(),
+            "wealth": WealthDrive(),
+            "security": SecurityDrive(),
             "curiosity": CuriosityDrive()
         }
-        logging.info("[DriveManager] Initialized")
+        logging.info("[DriveManager] Initialized Trinity Drives")
     
-    def tickAllDrivers(self):
+    def update_drives(self, context: Dict[str, Any]) -> str:
         """
-        Tick all drives to update their state.
-        This method should be called periodically to ensure drives are evaluated.
+        Update all drives and return the name of the dominant drive.
         """
-        for drive in self.drives.values():
+        max_intensity = -1.0
+        dominant_drive = "security" # Default to safety
+        
+        for name, drive in self.drives.items():
             try:
-                drive.tick()
-                logging.info(f"[DriveManager] Ticked drive: {drive.name}")
+                drive.update(context)
+                logging.debug(f"[Drive] {name}: {drive.intensity:.2f}")
+                
+                # Security Override: If Security > 0.8, it wins automatically
+                if name == "security" and drive.intensity > 0.8:
+                    return "security"
+                
+                if drive.intensity > max_intensity:
+                    max_intensity = drive.intensity
+                    dominant_drive = name
+                    
             except Exception as e:
-                logging.error(f"[DriveManager] Error ticking drive {drive.name}: {e}")
-    
-    def tickDrive(self, drive_name):
-        """
-        Tick a specific drive by name.
-        """
-        if drive_name in self.drives:
-            try:
-                self.drives[drive_name].tick()
-            except Exception as e:
-                logging.error(f"[DriveManager] Error ticking drive {drive_name}: {e}")
-        else:
-            logging.warning(f"[DriveManager] Drive {drive_name} not found")
+                logging.error(f"[DriveManager] Error updating {name}: {e}")
+                
+        return dominant_drive

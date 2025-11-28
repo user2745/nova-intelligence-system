@@ -9,7 +9,7 @@ class WorkingMemory(object):
 
 
     def __init__(self) -> None:
-            embeddings = OllamaEmbeddings(model="deepseek-llm")
+            embeddings = OllamaEmbeddings(model="llama3.1:latest")
             self.vector_store = Chroma(
                 collection_name="example_collection",
                 embedding_function=embeddings,
@@ -35,15 +35,26 @@ class WorkingMemory(object):
         Write to the working memory.
         """
         try:
-            logging.info(f"Writing payload to working memory: {payload}")
+            logging.debug(f"Writing payload to working memory: {payload}")
             # Store the payload in the vector store
             # Convert dict to Document object
+            # Flatten metadata to avoid ChromaDB errors with nested dicts
+            safe_metadata = {}
+            if isinstance(payload, dict):
+                for k, v in payload.items():
+                    if isinstance(v, (str, int, float, bool)):
+                        safe_metadata[k] = v
+                    else:
+                        safe_metadata[k] = str(v)
+            else:
+                safe_metadata = {"content": str(payload)}
+
             doc = Document(
                 page_content=str(payload),
-                metadata=payload if isinstance(payload, dict) else {"content": payload}
+                metadata=safe_metadata
             )
             self.vector_store.add_documents([doc])
-            logging.info(f"Payload written to working memory: {payload}")
+            logging.debug(f"Payload written to working memory: {payload}")
         except Exception as e:
             logging.error(f"Failed to write to working memory: {e}")
 
