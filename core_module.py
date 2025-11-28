@@ -14,12 +14,19 @@ from nova_core.models.procedural_memory import ProceduralMemory
 from nova_core.models.working_memory import WorkingMemory
 from nova_core.models.situational_model import SituationalModel, SituationalAwareness
 from nova_core.models.chain_of_thought import ChainOfThoughts
+from nova_core.memory_manager import ChromaMemoryManager
 
 # Import external perceptive modules
 from perceptions.wallet_surveillance import WalletSurveillance
 from perceptions.time_cartel import TimeCartel
 from perceptions.system_snitch import SystemSnitch
 
+        # 4. Initialize Actuators
+from actuators.actuator_manager import ActuatorManager
+from actuators.network_actuator import NetworkActuator
+from actuators.market_actuator import MarketActuator
+from actuators.research_actuator import ResearchActuator
+from agents.research_agent import WebCrawler
 class CoreModule:
     """
     Phase 2 Core Module:
@@ -29,7 +36,11 @@ class CoreModule:
     - Routes brain-generated commands to EventBus
     """
     def __init__(self, bus_url: str = None):
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.WARNING)
+        # Silence noisy libraries
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("chromadb").setLevel(logging.WARNING)
+        
         self.real_time_queue = RealTimeQueue()
         self.ucp = Subject()
 
@@ -40,8 +51,17 @@ class CoreModule:
         self.situational_model = SituationalModel()
         self.situational_awareness = SituationalAwareness()
         self.chain_of_thought = ChainOfThoughts(device_id="NovaCore")
+        
+        # Unified Memory
+        self.memory = ChromaMemoryManager()
 
-        # NovaBrain orchestrator
+        
+        self.actuator_manager = ActuatorManager()
+        self.actuator_manager.register_actuator(NetworkActuator())
+        self.actuator_manager.register_actuator(MarketActuator())
+
+        self.actuator_manager.register_actuator(ResearchActuator(web_crawler=None, memory_manager=self.memory))
+
         self.brain = NovaBrainV4(
             ucp=self.ucp,
             working_memory=self.working_memory,
@@ -49,9 +69,11 @@ class CoreModule:
             procedural_memory=self.procedural_memory,
             situational_awareness=self.situational_awareness,
             chain_of_thought=self.chain_of_thought,
-            real_time_queue=self.real_time_queue
+            real_time_queue=self.real_time_queue,
+            actuator_manager=self.actuator_manager,
+            memory_manager=self.memory
         )
-
+        
         # Perception component
         self.body = CLIBody(self.real_time_queue)
 
@@ -63,11 +85,19 @@ class CoreModule:
         self.wallet_surveillance = WalletSurveillance(self.real_time_queue)
         self.time_cartel = TimeCartel(self.real_time_queue)
         self.system_snitch = SystemSnitch(self.real_time_queue)
+        
+        # Initialize Research Agent (Passive)
+        self.web_crawler = WebCrawler(self.real_time_queue)
+        
+        # Inject crawler into ResearchActuator
+        if "research" in self.actuator_manager.actuators:
+            self.actuator_manager.actuators["research"].web_crawler = self.web_crawler
+
+        self.brain.tools = {"web_crawler": self.web_crawler}
 
         # Publish system startup
         startup = {"node_id": uuid.uuid4().hex}
         await self.real_time_queue.enqueue(startup)
-
 
 
 
