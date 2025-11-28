@@ -5,7 +5,7 @@ from speak_tool import speak
 
 def build_speak_agent():
     llm = ChatOllama(
-        model="llama3.1",
+        model="phi4",
         temperature=0.2,
         stream=False
     )

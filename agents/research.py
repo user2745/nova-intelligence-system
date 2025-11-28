@@ -146,22 +146,3 @@ def run_research_task(task: str) -> str:
     if isinstance(content, str):
         return content
     return str(content)
-
-
-# ----------------------
-# CLI entry point
-# ----------------------
-
-if __name__ == "__main__":
-    research_task = (
-        "Research the war in Sudan and provide a concise, up-to-date summary of "
-        "the current situation, key actors, humanitarian impact, and any recent "
-        "ceasefire or peace efforts."
-    )
-
-    try:
-        result = run_research_task(research_task)
-        print("=== Research Result ===\n")
-        print(result)
-    except Exception as e:
-        print(f"An error occurred during research task execution: {e}")
