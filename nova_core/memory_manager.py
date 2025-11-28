@@ -14,7 +14,7 @@ class ChromaMemoryManager:
     - knowledge_graph: Research, concepts, facts
     """
     
-    def __init__(self, persistence_path: str = "./nova_memory_db"):
+    def __init__(self, persistence_path: str = "./working_memory_db"):
         logging.info(f"[Memory] Initializing ChromaDB at {persistence_path}")
         self.client = chromadb.PersistentClient(path=persistence_path)
         
