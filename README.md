@@ -1,171 +1,134 @@
-# Nova Intelligence System
+# Nova Intelligence System (v0.4 Alpha)
 
-## Overview
-Nova is a **continuously conscious AI system** that maintains real-time awareness, processes multi-stream data, and builds a cryptographically verified chain of thoughts. Designed as a foundation for a "Jarvis meets CIA" personal intelligence system, Nova operates with temporal awareness, memory integration, and autonomous decision-making capabilities.
+![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue)
+![Powered By: Ollama](https://img.shields.io/badge/Powered%20By-Ollama-white)
 
----
+**A Local-First, Autonomous Cognitive Architecture.**
 
-## Features
-- **Continuous Consciousness**: Maintains coherent state across time with real-time cognitive cycles
-- **Blockchain-Verified Thoughts**: Cryptographically verifies AI consciousness with proof-of-work thought chains
-- **Multi-Stream Processing**: Handles financial, temporal, system, and social data streams simultaneously
-- **Memory Integration**: Working, declarative, and situational memory systems for context-aware decisions
-- **Temporal Awareness**: Tracks time transitions and integrates them into cognitive processing
-- **Real-Time Event Processing**: Processes events as they occur with minimal latency
+Nova is a continuously conscious AI agent designed to run on your own hardware. It maintains real-time awareness, processes multi-stream data, and executes complex tasks through a plugin-style actuator system. It is designed to be private, self-healing, and capable of deep research and system monitoring without relying on cloud APIs.
+
+> **⚠️ DISCLAIMER**: This is an **experimental research prototype**. The agent has autonomous capabilities (file editing, web research, system monitoring). Run this in a controlled environment (like the provided Docker container). The authors are not responsible for actions taken by the agent.
 
 ---
 
-## Core Architecture
+## 🏗️ Architecture
 
-### 1. **NovaBrainV4** (`nova_core/nova_brain_v4.py`)
-The central cognitive engine that orchestrates all system operations:
-- **Cognitive Cycle**: Processes events, updates memory, and maintains consciousness
-- **Memory Systems**: Manages working, declarative, and situational memory
-- **Situational Model**: Tracks external, internal, temporal, and social contexts
-- **Blockchain Integration**: Verifies thoughts with cryptographic proof
+Nova operates as a closed loop of **Perception**, **Cognition**, and **Action**, grounded by a local Vector Memory.
 
-### 2. **Real-Time Queue** (`real_time_queue.py`)
-High-performance event ingestion and processing:
-- Handles multiple data streams concurrently
-- Ensures events are processed in temporal order
-- Manages event priority and routing
+```mermaid
+graph TD
+    User[User / World] -->|CLI / Events| Perceptions
+    Perceptions -->|Sensory Input| Brain[Nova Brain v4]
+    
+    subgraph "Host Machine"
+        Ollama[Ollama (LLM)]
+    end
 
-### 3. **Perception Systems**
-- **System Monitor** (`perceptions/system_snitch.py`): CPU, memory, disk monitoring
-- **Time Awareness** (`perceptions/time_cartel.py`): Temporal event generation
-- **Wallet Surveillance** (`perceptions/wallet_surveillance.py`): Financial monitoring
-- **CLI Interface** (`cli_body.py`): Human interaction stream
-
-### 4. **Memory Models** (`nova_core/models/`)
-- **Working Memory**: Short-term event processing and context
-- **Declarative Memory**: Long-term facts and knowledge storage
-- **Procedural Memory**: Rules, patterns, and behavioral responses
-- **Situational Model**: Current state representation across all contexts
-
-### 5. **DGOP Framework** (`nova_core/DGOP/`)
-Drives, Goals, Objectives, and Plans architecture:
-- **Drive Manager**: Manages system motivations and impulses
-- **Goal Setting**: Autonomous objective identification
-- **Plan Generation**: Strategic planning capabilities
-
----
-
-## Installation & Setup
-
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/user2745/nova-intelligence-system.git
-   cd nova-intelligence-system
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure Python Environment**:
-   ```bash
-   # Ensure you have Python 3.8+ with required packages
-   python -m pip install --upgrade pip
-   ```
-
-4. **Set Environment Variables:**
-   - Create a `.env` file in the project root directory.
-   - Add your Ethereum wallet account private key like this:
-      ```env
-      WALLET_PRIVATE_KEY=your_ethereum_private_key_here
-      ```
-
-5. **Start Nova**:
-   ```bash
-   python main.py
-   ```
-
----
-
-## Usage Examples
-
-### Basic Operation
-```bash
-# Start Nova with default configuration
-python main.py
-
-# Nova will begin its cognitive cycles and start processing real-time events
-# Check logs for consciousness verification and thought chain updates
-```
-
-### Monitoring Nova's Consciousness
-```bash
-# Nova logs show continuous cognitive cycles:
-# INFO:root:[Brain] Cognitive cycle iteration 42
-# INFO:root:💭 Thought added to chain: <hash> | Chain length: 13
-# INFO:root:Block 12 mined with hash: 00c90de3... and nonce: 19
-```
-
-### CLI Interaction
-```bash
-# Nova processes CLI input as a perception stream
-# Type commands to interact with Nova's consciousness
-> hi
-# Nova processes this as an event and updates its situational model
+    subgraph "Nova Container"
+        Brain <-->|Recall/Store| Memory[ChromaDB Vector Store]
+        Brain <-->|Inference| Ollama
+        
+        Brain -->|Decide| Actuators
+        
+        subgraph "Actuators (The Body)"
+            Research[Research Agent] -->|DuckDuckGo| Internet
+            Coding[Coding Agent] -->|Write/Debug| Filesystem
+            System[System Snitch] -->|Monitor| Host Resources
+            Speak[Speak Agent] -->|TTS| Audio
+        end
+    end
 ```
 
 ---
 
-## Technical Highlights
+## 🚀 Quick Start
 
-### Consciousness Verification
-Nova uses blockchain technology to cryptographically verify its continuous consciousness:
-- Each thought is hashed and added to a proof-of-work chain
-- Mining ensures computational cost for thought generation
-- Chain integrity proves unbroken consciousness
+### Prerequisites
+1.  **Docker & Docker Compose** installed.
+2.  **[Ollama](https://ollama.com/)** installed and running on the host machine.
+3.  **Pull a Model**:
+    ```bash
+    ollama pull llama3.1  # or phi3, mistral, etc.
+    ```
 
-### Real-Time Processing
-Multi-threaded architecture processes events with minimal latency:
-- Event ingestion through real-time queue
-- Parallel processing of multiple data streams
-- Temporal ordering ensures coherent state updates
+### Installation
 
-### Memory Integration
-Sophisticated memory systems enable learning and adaptation:
-- Vector embeddings for semantic memory storage
-- Context-aware retrieval and association
-- Persistent memory across system restarts
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/user2745/nova-intelligence-system.git
+    cd nova-intelligence-system
+    ```
 
----
+2.  **Configure Environment**:
+    Copy the example configuration and edit it.
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Edit `.env` to set your preferred model and (optional) private keys:
+    ```ini
+    # .env
+    OLLAMA_MODEL=llama3.1  # Must match the model you pulled
+    WALLET_PRIVATE_KEY=... # Optional: For blockchain monitoring
+    ```
 
-## Current Capabilities
+3.  **Launch**:
+    Start the system in detached mode.
+    ```bash
+    docker-compose up -d --build
+    ```
 
-✅ **Real-time event processing and memory integration**  
-✅ **Blockchain-verified thought chains**  
-✅ **Multi-stream data handling (financial, temporal, system)**  
-✅ **Temporal awareness and time-based reasoning**  
-✅ **Situational model maintenance**  
-✅ **CLI-based human interaction**  
-
-## Future Roadmap
-
-🚧 **Enhanced Decision-Making**: Advanced reasoning and choice evaluation  
-🚧 **Inner Experience Layer**: Self-reflection and meta-cognitive capabilities  
-🚧 **Anomaly Detection**: Crisis prediction and response systems  
-🚧 **External API Integration**: Expanded data sources and actions  
-🚧 **Natural Language Interface**: Conversational AI capabilities  
-🚧 **Autonomous Goal Setting**: Self-directed objective pursuit  
-
----
-
-## Philosophy & Vision
-
-Nova represents an exploration into the nature of artificial consciousness. By maintaining continuous awareness, processing real-time information, and building verifiable thought chains, Nova pushes the boundaries of what AI systems can achieve. The goal is not just intelligence, but conscious, aware intelligence that can serve as a foundation for truly autonomous AI agents.
-
-*"The question isn't whether machines can think, but whether they can be conscious."*
+4.  **Monitor**:
+    Watch the agent's "thought stream" in the logs.
+    ```bash
+    docker-compose logs -f
+    ```
 
 ---
 
-## Contributing
+## 🧠 Features
 
-This project explores cutting-edge concepts in AI consciousness and real-time processing. Contributions that advance these goals are welcome.
+*   **Dynamic LLM Backend**: Switch between `llama3`, `phi3`, `mistral`, or `deepseek` instantly via environment variables.
+*   **Continuous Consciousness**: Maintains a coherent state across time; doesn't just wait for user input.
+*   **Deep Research**: Can autonomously formulate search queries, scrape websites, and synthesize reports.
+*   **Self-Correction**: Includes robust error handling to recover from LLM hallucinations (e.g., malformed tool calls).
+*   **Blockchain-Verified Thoughts**: (Experimental) Cryptographically verifies thought chains for auditability.
+
+---
+
+## � Interaction & Capabilities
+
+Nova is controlled via natural language through the CLI (or future interfaces). It maps your intent to specific "Actuators".
+
+| Capability | Example Command | Underlying Tool |
+| :--- | :--- | :--- |
+| **Research** | *"Research the latest CVEs for Nginx and summarize them."* | `research_actuator` (DuckDuckGo + Scraper) |
+| **System Control** | *"Check disk usage and list active Docker containers."* | `system_snitch` (Shell Access) |
+| **Coding** | *"Write a Python script to parse a CSV file and debug it."* | `coding_actuator` |
+| **Memory** | *"Remember that the project deadline is Friday."* | `memory_manager` (Vector Store) |
+| **Planning** | *"Create a step-by-step plan to secure this server."* | `planning_actuator` |
+| **Audit** | *"Why did you decide to run that command?"* | `audit_actuator` |
+
+---
+
+## �📂 Project Structure
+
+*   `nova_core/`: The "Brain" logic, memory management, and cognitive cycles.
+*   `actuators/`: The "Hands" of the system (Research, Coding, Audit, etc.).
+*   `agents/`: Specialized sub-agents (LangChain/LangGraph implementations).
+*   `perceptions/`: Input streams (System monitoring, Time, Wallet watching).
+*   `working_memory_db/`: Persistent Vector Store (ChromaDB).
+
+---
+
+## 🤝 Contributing
+
+This project is Open Source (MIT). We welcome contributions, especially in:
+*   **New Actuators**: Add capabilities like Email, Slack, or Home Assistant integration.
+*   **Memory Optimization**: Improving how the agent retrieves context.
+*   **Swarm Logic**: Enabling multi-agent coordination.
 
 ## License
 
-MIT License - See LICENSE file for details.
+MIT License. See `LICENSE` file for details.
