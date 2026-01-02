@@ -1,5 +1,6 @@
 # Working memory is a chroma database with supplementary in-memory TTL cache.
 import logging
+import os
 from langchain_ollama import OllamaEmbeddings
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
@@ -9,7 +10,7 @@ class WorkingMemory(object):
 
 
     def __init__(self) -> None:
-            embeddings = OllamaEmbeddings(model="llama3.1:latest")
+            embeddings = OllamaEmbeddings(model=os.getenv("OLLAMA_MODEL", "llama3.1"))
             self.vector_store = Chroma(
                 collection_name="example_collection",
                 embedding_function=embeddings,
