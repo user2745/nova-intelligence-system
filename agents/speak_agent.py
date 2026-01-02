@@ -1,3 +1,4 @@
+import os
 from langchain_ollama import ChatOllama
 from langchain.agents import create_agent
 from speak_tool import speak
@@ -5,7 +6,7 @@ from speak_tool import speak
 
 def build_speak_agent():
     llm = ChatOllama(
-        model="phi4",
+        model=os.getenv("OLLAMA_MODEL", "phi4"),
         temperature=0.2,
         stream=False
     )

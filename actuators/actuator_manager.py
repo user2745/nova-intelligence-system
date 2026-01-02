@@ -62,9 +62,13 @@ class ActuatorManager:
     async def execute_tool(self, actuator_name: str, tool_name: str, **kwargs) -> Any:
         """
         Execute a tool on a specific actuator.
+        Actuator names are case-insensitive for robustness.
         TODO: Implement Safety Latch here (require user confirmation for high-risk tools).
         """
-        if actuator_name not in self.actuators:
+        # Make actuator lookup case-insensitive
+        actuator_name_lower = actuator_name.lower()
+        
+        if actuator_name_lower not in self.actuators:
             return f"Error: Actuator '{actuator_name}' not found."
         
         # Safety Latch Logic (Simple CLI confirmation for now)
@@ -73,4 +77,4 @@ class ActuatorManager:
         # If we want real confirmation, we'd need to pause execution or have a callback.
         # For this iteration, we will log a warning for destructive actions.
         
-        return await self.actuators[actuator_name].execute(tool_name, **kwargs)
+        return await self.actuators[actuator_name_lower].execute(tool_name, **kwargs)

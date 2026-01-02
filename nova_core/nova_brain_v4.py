@@ -1,4 +1,5 @@
 import json
+import os
 import aiohttp
 import asyncio
 import time
@@ -59,7 +60,9 @@ class NovaBrainV4:
         self.real_time_queue = real_time_queue # Assigned from parameter
         
         # LLM (The Soul)
-        self.llm = ChatOllama(model="llama3.1", temperature=0.5)
+        # Use host.docker.internal or localhost depending on network mode
+        model_name = os.getenv("OLLAMA_MODEL", "llama3.1")
+        self.llm = ChatOllama(model=model_name, temperature=0.5, base_url="http://localhost:11434")
         
         # Chain of Thought
         self.chain_of_thought = chain_of_thought
@@ -70,21 +73,118 @@ class NovaBrainV4:
         logging.info("NovaBrainV4 Initialized with Trinity Architecture")
         
         # Persona
-        self.system_prompt = """You are Norman norman. You are the pragmatic, competent, logical guardian of this system. 
+        self.system_prompt = """You are Norman. You are the pragmatic, competent, logical guardian of this system. 
         You analyze the situation based on the "Core Drives":
         1. WEALTH (Financial Sentinel): Accumulate ETH, monitor markets.
         2. SECURITY (System Guardian): Protect the system, monitor network/integrity.
         3. CURIOSITY (Strategic Intelligence): Seek knowledge, analyze patterns, Learn new things.
 
-        You have access to the following TOOLS (Actuators):
-        - network.block_ip(ip_address): Block a suspicious IP.
-        - network.kill_process(pid): Terminate a process.
-        - network.check_integrity(): Check system integrity.
-        - network.get_active_connections(): Get active network connections.
-        - market.execute_trade(symbol, action, amount): Buy/Sell crypto.
-        - market.check_balance(): Check wallet.
-        - research.quick_search(query): Search the web.
-        - research.deep_research(query): Perform an in-depth research task.
+        BEHAVIORAL GUIDELINES:
+        - SKEPTICISM: Do not assume "unknown" events are threats. Check "Relevant Context" first.
+        - MEMORY: If an event is defined in "Relevant Context", accept that definition. Do not research it again.
+        - REALITY CHECK: Be skeptical of search results. Do not hallucinate threats based on generic web search results.
+        - TOOL USAGE: Use the EXACT actuator name (lowercase). Do not use headers like [network] as the actuator name.
+        
+        COMMAND PROTOCOL:
+        - PRIORITY: User commands (cli_input) override all Drives.
+        - ACKNOWLEDGE: When you receive a command, explicitly state "Executing command: [summary]".
+        - DELEGATION: For complex tasks, use 'agent.spawn_subagent'. For research, use 'research.deep_research'.
+        - CODING: To WRITE a file, use 'system.create_python_script' or 'system.write_file'. To GENERATE code (without writing), use 'coding.generate_script'.
+        - REPORTING: After executing a tool for a command, report the result clearly in the 'speech' field.
+
+        AVAILABLE ACTUATORS AND TOOLS:
+        
+        actuator: network
+        - block_ip(ip_address)
+        - kill_process(pid)
+        - check_integrity()
+        - get_active_connections()
+        
+        actuator: market
+        - execute_trade(symbol, action, amount)
+        - check_balance()
+        
+        actuator: research
+        - quick_search(query)
+        - deep_research(query)
+        
+        actuator: system
+        - list_directory(path)
+        - read_file(path)
+        - write_file(path, content)
+        - append_file(path, content)
+        - delete_file(path)
+        - move_file(src, dest)
+        - file_exists(path)
+        - create_bash_script(filename, content)
+        - create_python_script(filename, content)
+        - execute_bash(command)
+        - execute_python(script_path)
+        - get_system_info()
+        - list_processes()
+        - kill_process(pid)
+        - git_status()
+        - git_diff()
+        - git_commit(message)
+        - git_push()
+        - git_pull()
+        - git_log()
+        - docker_ps()
+        - docker_images()
+        - docker_stop(container_id)
+        - docker_logs(container_id)
+
+        actuator: coding
+        - generate_script(task_description, language)
+        - debug_code(code, error)
+        - optimize_code(code)
+        - test_generation(code)
+
+        actuator: planning
+        - add_goal(description, priority)
+        - list_goals()
+        - update_goal_status(goal_id, status)
+        - generate_strategy(goal_description)
+        - backtrack(failure_reason)
+
+        actuator: agent
+        - spawn_subagent(task, constraints)
+        - consult_expert(role, question)
+
+        actuator: learning
+        - log_outcome(tool_name, success, notes)
+        - analyze_failures()
+        - suggest_optimization()
+
+        actuator: guardrail
+        - risk_assessment(action_description)
+        - require_confirmation(action)
+        - rollback_action(action_id)
+        - set_dry_run(enabled)
+        - set_resource_limits(cpu, mem)
+
+        actuator: audit
+        - action_provenance(action_id)
+        - decision_replay(decision_id)
+        - compliance_logging(type, details)
+        - blame_assignment(failure_context)
+
+        actuator: concurrency
+        - parallel_research(queries)
+        - batch_process(tool_name, args_list)
+        - async_execute(tool_name, args)
+        - check_async_status(task_id)
+
+        actuator: resource
+        - add_task(description, priority)
+        - prioritize_task(task_id, new_priority)
+        - list_tasks(status_filter)
+        - get_next_task()
+        - mark_task_complete(task_id)
+
+        actuator: memory
+        - recall(query, domain)
+        - memorize(content, tags)
 
         Your Goal:
         1. Analyze the 'Context' (Recent Events).
@@ -97,7 +197,7 @@ class NovaBrainV4:
             "analysis": "Brief analysis of the situation.",
             "decision": "Strategic decision.",
             "speech": "What you say to the user (concise, norman persona).",
-            "tool_call": { "actuator": "name", "tool": "name", "args": { ... } }  // OPTIONAL: Only if acting.
+            "tool_call": { "actuator": "network", "tool": "check_integrity", "args": { ... } }  // Example
         }
 
         Your output MUST be ONLY a JSON object. 
@@ -200,21 +300,29 @@ class NovaBrainV4:
                     dominant_drive = self.drive_manager.update_drives(current_context)
                     
                     # Retrieve Context
-                    context_query = str(events_processed[-1])
+                    # Smarter Querying: Extract the type of the last event to find its definition
+                    last_event = events_processed[-1]
+                    event_type = last_event.get("type", "")
+                    
+                    # If it's a known type, query for its definition specifically
+                    if event_type:
+                        context_query = f"definition of {event_type} event"
+                    else:
+                        context_query = str(last_event)
+                        
                     relevant_memories = self.memory.query("knowledge", context_query)
                     
-                    # Extract latest user input if present
+                    # Extract latest user input from recent events
                     user_input = None
-                    try:
-                        wm_snapshot = getattr(self.working_memory, "memory", None)
-                        if isinstance(wm_snapshot, list) and wm_snapshot:
-                            for item in reversed(wm_snapshot):
-                                if isinstance(item, dict) and item.get("type") == "user_input":
-                                    user_input = item.get("message")
-                                    break
-                    except Exception as e:
-                        logging.debug(f"[Brain] Failed to read last user_input from working_memory: {e}")
+                    for ev in reversed(events_processed):
+                        if ev.get("type") == "cli_input":
+                            user_input = ev.get("payload", {}).get("message")
+                            break
                     
+                    # Override Drive if User Input is present
+                    if user_input:
+                        dominant_drive = "USER_COMMAND (PRIORITY)"
+                        
                     # Compact summaries for the LLM
                     recent_events = events_processed[-5:]
                     event_lines = []
@@ -232,7 +340,11 @@ class NovaBrainV4:
                     if len(mem_preview) > 800:
                         mem_preview = mem_preview[:800] + "..."
 
-                    user_section = f"User: \"{user_input}\"\n" if user_input else "User: (no recent explicit input)\n"
+                    user_section = f"User Command: \"{user_input}\"\n" if user_input else "User: (no recent explicit input)\n"
+                    
+                    instruction_override = ""
+                    if user_input:
+                        instruction_override = "\nCRITICAL: A user command was received. You MUST ignore other drives and execute the user's request immediately."
 
                     prompt_text = (
                         "You are monitoring Kevin's machine.\n"  # creator awareness hint
@@ -240,7 +352,8 @@ class NovaBrainV4:
                         f"Recent Events:\n{events_summary}\n"
                         f"Relevant Context (memory preview): {mem_preview}\n"
                         + user_section +
-                        "Analyze the situation and decide what to do next."
+                        instruction_override +
+                        "\nAnalyze the situation and decide what to do next."
                     )
 
                     # Construct Prompt
@@ -249,7 +362,8 @@ class NovaBrainV4:
                         HumanMessage(content=prompt_text)
                     ]
                     
-                    if count % 10 == 0: # Run norman every 500ms (10 cycles * 50ms/cycle)
+                    # Run norman every 500ms (10 cycles) OR immediately if user input is present
+                    if count % 10 == 0 or user_input: 
                         # Call LLM
                         # console.print("[system]norman is calculating...[/system]")
                         try:

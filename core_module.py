@@ -26,6 +26,16 @@ from actuators.actuator_manager import ActuatorManager
 from actuators.network_actuator import NetworkActuator
 from actuators.market_actuator import MarketActuator
 from actuators.research_actuator import ResearchActuator
+from actuators.system_actuator import SystemActuator
+from actuators.coding_actuator import CodingActuator
+from actuators.planning_actuator import PlanningActuator
+from actuators.agent_actuator import AgentActuator
+from actuators.learning_actuator import LearningActuator
+from actuators.guardrail_actuator import GuardrailActuator
+from actuators.audit_actuator import AuditActuator
+from actuators.concurrency_actuator import ConcurrencyActuator
+from actuators.resource_actuator import ResourceActuator
+from actuators.memory_actuator import MemoryActuator
 from agents.research_agent import WebCrawler
 class CoreModule:
     """
@@ -59,6 +69,16 @@ class CoreModule:
         self.actuator_manager = ActuatorManager()
         self.actuator_manager.register_actuator(NetworkActuator())
         self.actuator_manager.register_actuator(MarketActuator())
+        self.actuator_manager.register_actuator(SystemActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(CodingActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(PlanningActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(AgentActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(LearningActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(GuardrailActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(AuditActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(ConcurrencyActuator(actuator_manager=self.actuator_manager, memory_manager=self.memory))
+        self.actuator_manager.register_actuator(ResourceActuator(memory_manager=self.memory))
+        self.actuator_manager.register_actuator(MemoryActuator(memory_manager=self.memory))
 
         self.actuator_manager.register_actuator(ResearchActuator(web_crawler=None, memory_manager=self.memory))
 

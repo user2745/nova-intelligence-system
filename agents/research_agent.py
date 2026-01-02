@@ -34,10 +34,3 @@ class WebCrawler:
                 
         except Exception as e:
             logging.error(f"[WebCrawler] Search error: {e}")
-
-    async def start_monitoring(self):
-        """
-        Optional: Monitor specific topics periodically.
-        For now, this is a passive tool invoked by the Brain.
-        """
-        pass

@@ -17,3 +17,5 @@ flask-cors
 ddgs
 bs4
 langchain
+duckduckgo-search
+beautifulsoup4

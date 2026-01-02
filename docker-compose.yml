@@ -12,12 +12,20 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=INFO
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
     volumes:
       - ./audio_outputs:/app/audio_outputs
       - ./logs:/app/logs
+    # Use host network to access local Ollama and monitor actual system network
+    network_mode: "host"
+    # ports:  # Ports are ignored when using host network mode
+    #   - "8000:8000"
+    #   - "5000:5000"
+    env_file:
+      - .env
     restart: unless-stopped
-    networks:
-      - nova-network
+    # networks: # Incompatible with network_mode: host
+    #   - nova-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -33,13 +41,13 @@ services:
   #     - "6379:6379"
   #   volumes:
   #     - redis-data:/data
-  #   networks:
-  #     - nova-network
+  #   # networks:
+  #   #   - nova-network
   #   restart: unless-stopped
 
-networks:
-  nova-network:
-    driver: bridge
+# networks:
+#   nova-network:
+#     driver: bridge
 
 # volumes:
 #   redis-data:

@@ -21,10 +21,14 @@ class ResearchActuator(Actuator):
             "Run an LLM-powered deep research task and store the result in memory",
         )
 
-    async def quick_search(self, query: str) -> str:
+    async def quick_search(self, query: str, **kwargs) -> str:
         """
         Perform a search and store an intel brief only in Chroma.
         """
+        # Handle list inputs (LLM hallucination fix)
+        if isinstance(query, list):
+            query = " ".join(str(q) for q in query)
+            
         logging.info(f"[ResearchActuator] 🔍 Deep searching: {query}")
         try:
             results = self.web_crawler.ddgs.text(query, max_results=5)
@@ -76,10 +80,15 @@ class ResearchActuator(Actuator):
         except Exception as e:
             return f"Search failed: {str(e)}"
 
-    async def deep_research(self, query: str) -> str:
+    async def deep_research(self, query: str, **kwargs) -> str:
         """
         Use the LangChain-based research agent to perform a deeper investigation.
+        Falls back to web search if LangChain is not available.
         """
+        # Handle list inputs (LLM hallucination fix)
+        if isinstance(query, list):
+            query = " ".join(str(q) for q in query)
+
         logging.info(f"[ResearchActuator] 🧠 Deep research on: {query}")
         try:
             # This is synchronous and may be slow; run in a thread to not block the loop
@@ -107,7 +116,16 @@ class ResearchActuator(Actuator):
                 logging.info("[ResearchActuator] 🧠 Indexed deep research report in knowledge_graph")
 
             return f"Deep research completed for '{query}'. Summary:\n\n{result[:800]}..."
+        except RuntimeError as e:
+            # LangChain dependencies not available - fallback to quick search
+            if "LangChain dependencies" in str(e):
+                logging.warning(f"[ResearchActuator] LangChain not available, falling back to quick_search")
+                return await self.quick_search(query)
+            else:
+                logging.exception("[ResearchActuator] Deep research failed")
+                return f"Deep research failed: {e}"
         except Exception as e:
             logging.exception("[ResearchActuator] Deep research failed")
             return f"Deep research failed: {e}"
+
    
